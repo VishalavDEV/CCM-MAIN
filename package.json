@@ -1,0 +1,15 @@
+{
+  "name": "ccm-main",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start:api": "npm --prefix backend run start:api",
+    "db:apply": "node apply-schema.mjs"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "pg": "^8.11.5"
+  }
+}
