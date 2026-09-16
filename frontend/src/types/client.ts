@@ -4,55 +4,62 @@ export interface Client {
   id: string;
   tenantId: string;
   organizationId: string;
-  // Client Information
+
+  // 1. Client Info
   clientName: string;
   clientCode: string;
   businessType: string;
   gstNumber?: string;
   contactPersonName: string;
-  contactPersonContactNumber: string;
 
-  // Contact Address
+  // 2. Address Details
   email: string;
-  phoneNumber: string;
+  phone?: string;
+  phoneNumber?: string; // alias for backwards compatibility
   address: string;
   city: string;
   state: string;
   country: string;
   pincode: string;
-
-  // Business Setup
   currency: string;
-  numberOfBranches: number;
-  numberOfWarehouses: number;
-  onboardingDate: string;
-  accountStatus: ClientAccountStatus;
-  msmeNumber?: string;
 
+  // System & Metadata
+  accountStatus: ClientAccountStatus;
   activeRequestsCount?: number;
   createdAt: string;
+
+  // Optional extended attributes
+  contactPersonContactNumber?: string;
+  numberOfBranches?: number;
+  numberOfWarehouses?: number;
+  onboardingDate?: string;
+  msmeNumber?: string;
 }
 
 export interface ClientFormData {
+  // 1. Client Info
   clientName: string;
   clientCode: string;
   businessType: string;
   gstNumber?: string;
   contactPersonName: string;
-  contactPersonContactNumber: string;
 
+  // 2. Address Details
   email: string;
-  phoneNumber: string;
+  phone: string;
+  phoneNumber?: string; // alias for compatibility
   address: string;
   city: string;
   state: string;
   country: string;
   pincode: string;
-
   currency: string;
-  numberOfBranches: number;
-  numberOfWarehouses: number;
-  onboardingDate: string;
-  accountStatus: ClientAccountStatus;
+
+  // Optional metadata
+  accountStatus?: ClientAccountStatus;
+  contactPersonContactNumber?: string;
+  numberOfBranches?: number;
+  numberOfWarehouses?: number;
+  onboardingDate?: string;
   msmeNumber?: string;
 }

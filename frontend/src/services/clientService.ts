@@ -20,6 +20,7 @@ export const clientService = {
           contactPersonName: c.contactPersonName || c.contactPerson || c.contact_person || 'Contact',
           contactPersonContactNumber: c.contactPersonContactNumber || c.phone || '',
           email: c.email || '',
+          phone: c.phone || c.phoneNumber || '',
           phoneNumber: c.phoneNumber || c.phone || '',
           address: c.address || '',
           city: c.city || 'Bangalore',
@@ -58,6 +59,7 @@ export const clientService = {
           contactPersonName: c.contactPersonName || c.contactPerson,
           contactPersonContactNumber: c.contactPersonContactNumber || c.phone,
           email: c.email,
+          phone: c.phone || c.phoneNumber || '',
           phoneNumber: c.phoneNumber || c.phone,
           address: c.address,
           city: c.city || 'Bangalore',
@@ -96,6 +98,7 @@ export const clientService = {
       const res = await apiClient.post('/api/master/clients', payload);
       if (res && res.success && res.data) {
         const c = res.data;
+        const phoneVal = data.phone || data.phoneNumber || '';
         const newClient: Client = {
           id: c.id,
           tenantId: '00000000-0000-0000-0000-000000000001',
@@ -105,9 +108,10 @@ export const clientService = {
           businessType: data.businessType,
           gstNumber: data.gstNumber,
           contactPersonName: data.contactPersonName,
-          contactPersonContactNumber: data.phoneNumber,
+          contactPersonContactNumber: phoneVal,
           email: data.email,
-          phoneNumber: data.phoneNumber,
+          phone: phoneVal,
+          phoneNumber: phoneVal,
           address: data.address,
           city: data.city,
           state: data.state,
@@ -128,6 +132,7 @@ export const clientService = {
     } catch (err) {
       console.warn('clientService.create API warning:', err);
     }
+    const phoneVal = data.phone || data.phoneNumber || '';
     const newClient: Client = {
       id: `cli-${Date.now()}`,
       tenantId: '00000000-0000-0000-0000-000000000001',
@@ -137,9 +142,10 @@ export const clientService = {
       businessType: data.businessType,
       gstNumber: data.gstNumber,
       contactPersonName: data.contactPersonName,
-      contactPersonContactNumber: data.contactPersonContactNumber,
+      contactPersonContactNumber: phoneVal,
       email: data.email,
-      phoneNumber: data.phoneNumber,
+      phone: phoneVal,
+      phoneNumber: phoneVal,
       address: data.address,
       city: data.city,
       state: data.state,
