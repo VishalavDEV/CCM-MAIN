@@ -7,7 +7,7 @@ import { Forbidden403Page, NotFound404Page } from '../pages/error/ErrorPages';
 
 // Admin Pages
 import { SuperAdminDashboard } from '../pages/admin/SuperAdminDashboard';
-import { TenantListPage, TenantDetailPage } from '../pages/admin/TenantManagementPages';
+import { TenantListPage, TenantDetailPage, AddTenantPage } from '../pages/admin/TenantManagementPages';
 import {
   OrganizationListPage,
   OrganizationDetailPage,
@@ -19,23 +19,24 @@ import {
   RoleFormPage,
   PermissionListPage,
   AuditLogsPage,
+  AddUserPage,
 } from '../pages/admin/UserAndRolePages';
 
 // Master Data
 import { ClientListPage, ClientDetailPage, ClientOnboardingWizard } from '../pages/clients/ClientPages';
 import { VendorListPage, VendorDetailPage, VendorOnboardingWizard } from '../pages/vendors/VendorPages';
-import { ItemMasterListPage } from '../pages/items/ItemMasterPages';
+import { ItemMasterListPage, AddItemPage } from '../pages/items/ItemMasterPages';
 
 // Operations
 import { CollectionPage } from '../pages/collection/CollectionPage';
 import { RequestListPage, RequestDetailPage } from '../pages/requests/RequestPages';
 import { LabQueuePage, ItemVerificationPage } from '../pages/lab/LabAndVerificationPages';
-import { CalibrationQueuePage, CalibrationDueListPage } from '../pages/calibration/CalibrationPages';
+import { CalibrationQueuePage, CalibrationDueListPage, PerformCalibrationPage } from '../pages/calibration/CalibrationPages';
 
 // Commercial
 import { QuotationListPage, QuotationCreatePage } from '../pages/commercial/CommercialPages';
 import { ApprovalQueuePage } from '../pages/commercial/CommercialPages';
-import { InvoiceListPage, PurchaseOrderListPage } from '../pages/commercial/InvoicesAndPurchaseOrders';
+import { InvoiceListPage, PurchaseOrderListPage, AddInvoicePage, AddPurchaseOrderPage } from '../pages/commercial/InvoicesAndPurchaseOrders';
 
 // Execution
 import {
@@ -76,6 +77,22 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route
+          path="admin/tenants/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.TENANT_CREATE}>
+              <AddTenantPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="admin/tenants/edit/:id"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.TENANT_UPDATE}>
+              <AddTenantPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
           path="admin/tenants/:tenantId"
           element={
             <PermissionRoute permission={PERMISSION_CODES.TENANT_VIEW}>
@@ -93,18 +110,18 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route
-          path="admin/organizations/:id"
+          path="admin/organizations/new"
           element={
-            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
-              <OrganizationDetailPage />
+            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_CREATE}>
+              <OrganizationOnboardingWizard />
             </PermissionRoute>
           }
         />
         <Route
-          path="organizations/new"
+          path="admin/organizations/:id"
           element={
-            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_CREATE}>
-              <OrganizationOnboardingWizard />
+            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
+              <OrganizationDetailPage />
             </PermissionRoute>
           }
         />
@@ -117,6 +134,23 @@ export const AppRoutes: React.FC = () => {
             </PermissionRoute>
           }
         />
+        <Route
+          path="admin/users/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.USER_CREATE}>
+              <AddUserPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="admin/users/edit/:id"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.USER_UPDATE}>
+              <AddUserPage />
+            </PermissionRoute>
+          }
+        />
+
         <Route
           path="admin/roles"
           element={
@@ -217,6 +251,30 @@ export const AppRoutes: React.FC = () => {
             </PermissionRoute>
           }
         />
+        <Route
+          path="items/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ITEM_CREATE}>
+              <AddItemPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="items/edit/:id"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ITEM_UPDATE}>
+              <AddItemPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="master/items"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ITEM_VIEW}>
+              <ItemMasterListPage />
+            </PermissionRoute>
+          }
+        />
 
         {/* Operations */}
         <Route
@@ -266,6 +324,14 @@ export const AppRoutes: React.FC = () => {
           element={
             <PermissionRoute permission={PERMISSION_CODES.CALIBRATION_VIEW}>
               <CalibrationQueuePage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="calibrations/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.CALIBRATION_CREATE}>
+              <PerformCalibrationPage />
             </PermissionRoute>
           }
         />
@@ -321,12 +387,28 @@ export const AppRoutes: React.FC = () => {
             </PermissionRoute>
           }
         />
+        <Route
+          path="purchase-orders/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.PO_CREATE}>
+              <AddPurchaseOrderPage />
+            </PermissionRoute>
+          }
+        />
 
         <Route
           path="commercial/invoices"
           element={
             <PermissionRoute permission={PERMISSION_CODES.INVOICE_VIEW}>
               <InvoiceListPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="invoices/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.INVOICE_CREATE}>
+              <AddInvoicePage />
             </PermissionRoute>
           }
         />

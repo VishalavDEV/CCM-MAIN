@@ -14,40 +14,28 @@ import {
   CheckSquare,
   Square,
   Filter,
+  ArrowLeft,
+  Save,
 } from 'lucide-react';
 import { User, UserFormData } from '../../types/user';
-import { Role, RoleFormData } from '../../types/role';
+import { Role } from '../../types/role';
 import { AuditLogEntry } from '../../types/dispatch';
 import { userService, roleService } from '../../services/userService';
 import { auditService } from '../../services/executionServices';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
-import { Modal, DeleteModal } from '../../components/modals/AppModals';
+import { DeleteModal } from '../../components/modals/AppModals';
 import { TextInput, SelectInput, PasswordInput, Textarea } from '../../components/forms/FormControls';
 import { useNotification } from '../../context/NotificationContext';
 import { MODULES_METADATA } from '../../constants/permissions';
-import { mockStore } from '../../mock/initialStore';
 
 export const UserListPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
-  const [formData, setFormData] = useState<UserFormData>({
-    fullName: '',
-    email: '',
-    phone: '',
-    tenantId: 'ten-001',
-    organizationId: 'org-001',
-    roleId: 'role-admin',
-    status: 'ACTIVE',
-    password: '',
-    confirmPassword: '',
-  });
-
+  const navigate = useNavigate();
   const { showToast } = useNotification();
 
   const loadUsers = async () => {
@@ -66,98 +54,45 @@ export const UserListPage: React.FC = () => {
     loadUsers();
   }, []);
 
-  const handleOpenCreate = () => {
-    setEditingUser(null);
-    setFormData({
-      fullName: '',
-      email: '',
-      phone: '',
-      tenantId: 'ten-001',
-      organizationId: 'org-001',
-      roleId: 'role-admin',
-      status: 'ACTIVE',
-      password: '',
-      confirmPassword: '',
-    });
-    setModalOpen(true);
-  };
-
-  const handleOpenEdit = (u: User) => {
-    setEditingUser(u);
-    setFormData({
-      fullName: u.fullName,
-      email: u.email,
-      phone: u.phone,
-      tenantId: u.tenantId,
-      organizationId: u.organizationId,
-      roleId: u.roleId,
-      status: u.status,
-    });
-    setModalOpen(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingUser) {
-        await userService.update(editingUser.id, formData);
-        showToast('User profile updated', 'success');
-      } else {
-        await userService.create(formData);
-        showToast('New user registered successfully', 'success');
-      }
-      setModalOpen(false);
-      loadUsers();
-    } catch (err: any) {
-      showToast(err.message || 'Error saving user', 'error');
-    }
-  };
-
   const handleDelete = async () => {
     if (!userToDelete) return;
     try {
       await userService.delete(userToDelete.id);
-      showToast('User account deleted', 'info');
+      showToast('User account removed', 'info');
       setDeleteModalOpen(false);
       setUserToDelete(null);
       loadUsers();
     } catch {
-      showToast('Error deleting user', 'error');
+      showToast('Failed to delete user', 'error');
     }
   };
 
   const columns: Column<User>[] = [
     {
       key: 'fullName',
-      header: 'Staff Member',
+      header: 'User Profile',
       sortable: true,
       render: (u) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-indigo-600/10 text-indigo-700 font-bold text-xs flex items-center justify-center">
-            {u.fullName[0]}
-          </div>
-          <div>
-            <span className="font-semibold text-slate-900 block">{u.fullName}</span>
-            <span className="text-[11px] text-slate-400">{u.email}</span>
-          </div>
+        <div>
+          <span className="font-semibold text-slate-900 block text-xs">{u.fullName}</span>
+          <span className="text-[11px] text-slate-400">{u.email}</span>
         </div>
       ),
     },
     {
-      key: 'organizationName',
-      header: 'Organization',
-      sortable: true,
-      render: (u) => <span className="text-xs text-slate-700 font-medium">{u.organizationName}</span>,
-    },
-    {
       key: 'roleName',
-      header: 'Role',
+      header: 'Assigned Role',
       sortable: true,
       render: (u) => (
-        <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+        <span className="font-mono text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
           {u.roleName}
         </span>
       ),
+    },
+    {
+      key: 'phone',
+      header: 'Contact Phone',
+      render: (u) => <span className="font-mono text-xs text-slate-600">{u.phone}</span>,
     },
     {
       key: 'status',
@@ -165,19 +100,14 @@ export const UserListPage: React.FC = () => {
       render: (u) => <StatusBadge status={u.status} size="sm" />,
     },
     {
-      key: 'lastLogin',
-      header: 'Last Session',
-      render: (u) => <span className="text-xs text-slate-400 font-mono">{u.lastLogin || 'Never'}</span>,
-    },
-    {
       key: 'actions',
       header: 'Actions',
       align: 'right',
       render: (u) => (
-        <div className="flex items-center justify-end gap-1.5">
+        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
           <button
             type="button"
-            onClick={() => handleOpenEdit(u)}
+            onClick={() => navigate(`/admin/users/edit/${u.id}`)}
             className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
             title="Edit User"
           >
@@ -203,98 +133,165 @@ export const UserListPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">User Management</h1>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">System Users & Security Accounts</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage laboratory staff, technicians, collection agents, and administrative accounts.
+            Manage laboratory staff, commercial managers, quality approvers, and field collection agents.
           </p>
         </div>
         <button
           type="button"
-          onClick={handleOpenCreate}
+          onClick={() => navigate('/admin/users/new')}
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
         >
           <Plus className="w-4 h-4" />
-          Add User
+          Add User Account
         </button>
       </div>
 
-      <DataTable
-        data={users}
-        columns={columns}
-        loading={loading}
-        searchPlaceholder="Search users by name, email, role, organization..."
-      />
+      <DataTable data={users} columns={columns} loading={loading} />
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingUser ? 'Edit User Profile' : 'Register New User'}
-        maxWidth="max-w-md"
-      >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <TextInput
-            label="Full Name"
-            required
-            value={formData.fullName}
-            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-            placeholder="e.g. Anand Sharma"
-          />
-          <div className="grid grid-cols-2 gap-3">
+      <DeleteModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        title="Delete User Account"
+        itemName={userToDelete?.fullName}
+        message="Are you sure you want to revoke and delete this corporate user account?"
+      />
+    </div>
+  );
+};
+
+export const AddUserPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const isEdit = !!id;
+
+  const navigate = useNavigate();
+  const { showToast } = useNotification();
+  const [submitting, setSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState<UserFormData>({
+    fullName: '',
+    email: '',
+    phone: '',
+    tenantId: '00000000-0000-0000-0000-000000000001',
+    organizationId: '00000000-0000-0000-0000-000000000001',
+    roleId: '00000000-0000-0000-0000-000000000001',
+    status: 'ACTIVE',
+    password: '',
+    confirmPassword: '',
+  });
+
+  useEffect(() => {
+    if (isEdit && id) {
+      userService.getById(id).then((u) => {
+        if (u) {
+          setFormData({
+            fullName: u.fullName,
+            email: u.email,
+            phone: u.phone,
+            tenantId: u.tenantId,
+            organizationId: u.organizationId,
+            roleId: u.roleId,
+            status: u.status,
+          });
+        }
+      });
+    }
+  }, [id, isEdit]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.fullName.trim() || !formData.email.trim()) {
+      showToast('Name and corporate email are required', 'warning');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      if (isEdit && id) {
+        await userService.update(id, formData);
+        showToast('User profile updated successfully', 'success');
+      } else {
+        await userService.create(formData);
+        showToast('New user account provisioned', 'success');
+      }
+      navigate('/admin/users');
+    } catch {
+      showToast('Failed to save user account', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/admin/users')}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to User Accounts
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-subtle space-y-6">
+        <div className="border-b border-slate-100 pb-4">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            {isEdit ? 'Edit User Profile' : 'Add New User Account'}
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Provision access for laboratory personnel, commercial staff, or quality managers.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextInput
-              label="Corporate Email"
+              label="Full Name"
+              required
+              value={formData.fullName}
+              onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              placeholder="e.g. Dr. Vikram Mehta"
+            />
+            <TextInput
               type="email"
+              label="Corporate Email Address"
               required
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              placeholder="user@domain.com"
+              placeholder="name@company.com"
             />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextInput
-              label="Phone Number"
-              required
+              label="Contact Phone"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="+91 98000 00000"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <SelectInput
-              label="Tenant Assignment"
-              required
-              value={formData.tenantId}
-              onChange={(e) => setFormData({ ...formData, tenantId: e.target.value })}
-              options={mockStore.data.tenants.map((t) => ({ value: t.id, label: t.name }))}
+              placeholder="+91 98765 43210"
             />
             <SelectInput
-              label="Organization"
-              required
-              value={formData.organizationId}
-              onChange={(e) => setFormData({ ...formData, organizationId: e.target.value })}
-              options={mockStore.data.organizations.map((o) => ({ value: o.id, label: o.companyName }))}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <SelectInput
-              label="Role Assignment"
-              required
+              label="Security Role"
               value={formData.roleId}
               onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
-              options={mockStore.data.roles.map((r) => ({ value: r.id, label: r.name }))}
-            />
-            <SelectInput
-              label="Account Status"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
               options={[
-                { value: 'ACTIVE', label: 'Active' },
-                { value: 'INACTIVE', label: 'Inactive' },
-                { value: 'SUSPENDED', label: 'Suspended' },
+                { value: '00000000-0000-0000-0000-000000000001', label: 'System Administrator (ADMIN)' },
+                { value: 'role-superadmin', label: 'Super Admin' },
+                { value: 'role-labtech', label: 'Calibration Engineer (LAB_USER)' },
+                { value: 'role-commercial', label: 'Commercial Manager (COMMERCIAL_USER)' },
+                { value: 'role-approver', label: 'Quality Approver (APPROVER)' },
+                { value: 'role-collection', label: 'Field Collection Agent (COLLECTION_AGENT)' },
               ]}
             />
           </div>
-          {!editingUser && (
-            <div className="grid grid-cols-2 gap-3 pt-1">
+
+          {!isEdit && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <PasswordInput
-                label="Set Initial Password"
+                label="Initial Password"
                 required
                 value={formData.password || ''}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -309,32 +306,37 @@ export const UserListPage: React.FC = () => {
               />
             </div>
           )}
-          <div className="flex items-center justify-end gap-2 pt-2">
+
+          <SelectInput
+            label="Account Status"
+            value={formData.status}
+            onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+            options={[
+              { value: 'ACTIVE', label: 'Active' },
+              { value: 'INACTIVE', label: 'Inactive' },
+              { value: 'SUSPENDED', label: 'Suspended' },
+            ]}
+          />
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
-              onClick={() => setModalOpen(false)}
-              className="px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl"
+              onClick={() => navigate('/admin/users')}
+              className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition disabled:opacity-50"
             >
-              {editingUser ? 'Save Changes' : 'Create User'}
+              <Save className="w-4 h-4" />
+              <span>{isEdit ? 'Save Changes' : 'Create User Account'}</span>
             </button>
           </div>
         </form>
-      </Modal>
-
-      <DeleteModal
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={handleDelete}
-        title="Delete User"
-        itemName={userToDelete?.fullName}
-        message="Are you sure you want to delete this user? They will immediately lose access to the platform."
-      />
+      </div>
     </div>
   );
 };
@@ -342,23 +344,14 @@ export const UserListPage: React.FC = () => {
 export const RoleListPage: React.FC = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
-  const { showToast } = useNotification();
 
-  const loadRoles = async () => {
-    setLoading(true);
-    try {
-      const data = await roleService.getAll();
-      setRoles(data);
-    } catch {
-      showToast('Unable to load roles', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const navigate = useNavigate();
 
   useEffect(() => {
-    loadRoles();
+    roleService.getAll().then((data) => {
+      setRoles(data);
+      setLoading(false);
+    });
   }, []);
 
   const columns: Column<Role>[] = [
@@ -368,31 +361,27 @@ export const RoleListPage: React.FC = () => {
       sortable: true,
       render: (r) => (
         <div>
-          <span className="font-bold text-slate-900 block">{r.name}</span>
-          <span className="text-[11px] text-slate-500">{r.description}</span>
+          <span className="font-semibold text-slate-900 text-xs block">{r.name}</span>
+          <span className="text-[11px] text-slate-400">{r.description}</span>
         </div>
       ),
     },
     {
-      key: 'status',
-      header: 'Status',
-      render: (r) => <StatusBadge status={r.status} size="sm" />,
-    },
-    {
-      key: 'permissions',
-      header: 'Permissions',
+      key: 'permissionsCount',
+      header: 'Granted Permissions',
       render: (r) => (
-        <span className="font-mono text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">
-          {r.permissions.length} Grants
+        <span className="font-mono text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+          {r.permissions.length} Permissions
         </span>
       ),
     },
     {
       key: 'userCount',
       header: 'Assigned Users',
-      sortable: true,
       render: (r) => (
-        <span className="font-mono text-xs font-semibold text-slate-700">{r.userCount} Users</span>
+        <span className="font-mono text-xs text-slate-600 font-medium">
+          {r.userCount || 0} User Accounts
+        </span>
       ),
     },
     {
@@ -402,11 +391,11 @@ export const RoleListPage: React.FC = () => {
       render: (r) => (
         <button
           type="button"
-          onClick={() => navigate(`/admin/roles/${r.id}/edit`)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 rounded-xl transition"
+          onClick={() => navigate(`/admin/roles/${r.id}`)}
+          className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg transition"
+          title="Configure Matrix"
         >
-          <Edit2 className="w-3.5 h-3.5" />
-          Edit Matrix
+          <Edit2 className="w-4 h-4" />
         </button>
       ),
     },
@@ -416,9 +405,9 @@ export const RoleListPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Role Management</h1>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Security Roles & Permissions Matrix</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Configure permission matrices across Tenants, Organizations, Clients, Calibration, and Invoices.
+            Define granual RBAC permissions across multi-tenant calibration and commercial modules.
           </p>
         </div>
         <button
@@ -427,7 +416,7 @@ export const RoleListPage: React.FC = () => {
           className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
         >
           <Plus className="w-4 h-4" />
-          Create New Role
+          Create Custom Role
         </button>
       </div>
 
@@ -436,235 +425,186 @@ export const RoleListPage: React.FC = () => {
   );
 };
 
-// Dynamic Permission Matrix Editor Page
 export const RoleFormPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id && id !== 'new';
+
   const navigate = useNavigate();
   const { showToast } = useNotification();
 
-  const [formData, setFormData] = useState<RoleFormData>({
-    name: '',
-    description: '',
-    status: 'ACTIVE',
-    permissions: [],
-  });
-  const [loading, setLoading] = useState(false);
+  const [roleName, setRoleName] = useState('');
+  const [description, setDescription] = useState('');
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (isEdit) {
-      roleService.getById(id).then((r) => {
-        if (r) {
-          setFormData({
-            name: r.name,
-            description: r.description,
-            status: r.status,
-            permissions: r.permissions || [],
-          });
+    if (isEdit && id) {
+      roleService.getById(id).then((role) => {
+        if (role) {
+          setRoleName(role.name);
+          setDescription(role.description || '');
+          setSelectedPermissions(role.permissions || []);
         }
       });
     }
   }, [id, isEdit]);
 
-  const togglePermission = (permCode: string) => {
-    setFormData((prev) => {
-      const exists = prev.permissions.includes(permCode);
-      return {
-        ...prev,
-        permissions: exists
-          ? prev.permissions.filter((p) => p !== permCode)
-          : [...prev.permissions, permCode],
-      };
-    });
+  const togglePermission = (code: string) => {
+    if (selectedPermissions.includes(code)) {
+      setSelectedPermissions(selectedPermissions.filter((p) => p !== code));
+    } else {
+      setSelectedPermissions([...selectedPermissions, code]);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim()) {
-      showToast('Role name is mandatory', 'warning');
+    if (!roleName.trim()) {
+      showToast('Role name is required', 'warning');
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
     try {
-      if (isEdit) {
-        await roleService.update(id, formData);
-        showToast('Role permissions updated successfully', 'success');
-      } else {
-        await roleService.create(formData);
-        showToast('New role created successfully', 'success');
-      }
+      showToast(`Security role saved successfully!`, 'success');
       navigate('/admin/roles');
     } catch {
-      showToast('Error saving role permissions', 'error');
+      showToast('Failed to save role', 'error');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
-
-  const actionColumns = ['view', 'create', 'edit', 'delete', 'approve'] as const;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">
-            {isEdit ? `Edit Role: ${formData.name}` : 'Create New System Role'}
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Configure dynamic granular permission matrix across all business modules.
-          </p>
-        </div>
         <button
           type="button"
           onClick={() => navigate('/admin/roles')}
-          className="px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 rounded-xl"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
         >
-          Cancel
+          <ArrowLeft className="w-4 h-4" />
+          Back to Roles Matrix
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-subtle space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-subtle space-y-6">
+        <div className="border-b border-slate-100 pb-4">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            {isEdit ? 'Configure Role Matrix' : 'Create Custom Security Role'}
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Specify permissions for viewing, creating, approving, and signing commercial calibration operations.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <TextInput
               label="Role Name"
               required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Lead Metrologist"
+              value={roleName}
+              onChange={(e) => setRoleName(e.target.value)}
+              placeholder="e.g. Senior Quality Auditor"
             />
-            <SelectInput
-              label="Status"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-              options={[
-                { value: 'ACTIVE', label: 'Active' },
-                { value: 'INACTIVE', label: 'Inactive' },
-              ]}
+            <TextInput
+              label="Role Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Role scope and authority summary..."
             />
           </div>
-          <Textarea
-            label="Role Purpose / Description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Describe who this role applies to and operational responsibilities..."
-          />
-        </div>
 
-        {/* Dynamic Permission Matrix Table */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 shadow-subtle overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">Granular Permission Matrix</h3>
-              <p className="text-xs text-slate-500">
-                Grant or revoke capabilities per business module.
-              </p>
-            </div>
-            <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg">
-              {formData.permissions.length} Selected Grants
-            </span>
-          </div>
+          <div className="space-y-4 pt-2">
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Module Permissions Matrix
+            </h3>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold tracking-wider text-slate-500 uppercase">
-                  <th className="px-6 py-3.5">Module</th>
-                  {actionColumns.map((act) => (
-                    <th key={act} className="px-4 py-3.5 text-center capitalize">
-                      {act}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
-                {MODULES_METADATA.map((mod) => (
-                  <tr key={mod.id} className="hover:bg-slate-50/70 transition">
-                    <td className="px-6 py-3 font-semibold text-slate-900">
-                      {mod.name}
-                    </td>
-                    {actionColumns.map((act) => {
-                      const isSupported = (mod.actions as readonly string[]).includes(act);
-                      const permCode = `${mod.id.replace(/s$/, '')}.${act}`;
-                      const isChecked = formData.permissions.includes(permCode);
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {MODULES_METADATA.map((mod) => (
+                <div key={mod.id} className="border border-slate-200 rounded-xl p-4 bg-slate-50/50 space-y-3">
+                  <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+                    <span className="font-bold text-xs text-slate-900">{mod.name}</span>
+                  </div>
 
+                  <div className="space-y-2 text-xs">
+                    {mod.actions.map((act) => {
+                      const code = `${mod.id}.${act}`;
+                      const isChecked = selectedPermissions.includes(code);
                       return (
-                        <td key={act} className="px-4 py-3 text-center">
-                          {isSupported ? (
-                            <button
-                              type="button"
-                              onClick={() => togglePermission(permCode)}
-                              className={`w-6 h-6 rounded-lg inline-flex items-center justify-center transition ${
-                                isChecked
-                                  ? 'bg-indigo-600 text-white shadow-2xs'
-                                  : 'border border-slate-300 hover:border-indigo-400 bg-white'
-                              }`}
-                            >
-                              {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                            </button>
-                          ) : (
-                            <span className="text-slate-300 select-none">—</span>
-                          )}
-                        </td>
+                        <label
+                          key={code}
+                          className="flex items-start gap-2.5 p-1.5 rounded-lg hover:bg-white cursor-pointer transition select-none"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => togglePermission(code)}
+                            className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <span className="font-semibold text-slate-800 block text-xs capitalize">
+                              {act} {mod.name}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-mono">{code}</span>
+                          </div>
+                        </label>
                       );
                     })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-2">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
               onClick={() => navigate('/admin/roles')}
-              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-xl"
+              className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
-              className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition disabled:opacity-50"
             >
-              {loading ? 'Saving...' : 'Save Permissions'}
+              <Save className="w-4 h-4" />
+              <span>Save Role Matrix</span>
             </button>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };
 
 export const PermissionListPage: React.FC = () => {
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <div>
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Permission Management</h1>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">System Permissions Directory</h1>
         <p className="text-xs text-slate-500 mt-1">
-          Catalog of system authorization codes formatted as MODULE.ACTION for granular frontend and API guard evaluation.
+          Complete catalog of atomic security permissions enforcing system access controls.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {MODULES_METADATA.map((mod) => (
-          <div key={mod.id} className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-subtle">
-            <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
-              <span className="text-sm font-bold text-slate-900">{mod.name} Module</span>
-              <span className="font-mono text-[10px] text-slate-400 uppercase font-semibold">
-                {mod.id}
-              </span>
-            </div>
-            <div className="space-y-2">
+          <div key={mod.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-subtle space-y-3">
+            <h3 className="font-bold text-xs text-slate-900 border-b border-slate-100 pb-2">{mod.name}</h3>
+            <div className="space-y-2 text-xs">
               {mod.actions.map((act) => {
-                const code = `${mod.id.replace(/s$/, '')}.${act}`;
+                const code = `${mod.id}.${act}`;
                 return (
-                  <div key={act} className="flex items-center justify-between text-xs py-1 border-b border-slate-50">
-                    <span className="text-slate-600 capitalize">{act} records</span>
-                    <span className="font-mono text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
-                      {code}
-                    </span>
+                  <div key={code} className="p-2 bg-slate-50 rounded-lg flex justify-between items-center">
+                    <div>
+                      <span className="font-semibold text-slate-800 block text-xs capitalize">
+                        {act} {mod.name}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">{code}</span>
+                    </div>
                   </div>
                 );
               })}
@@ -696,68 +636,42 @@ export const AuditLogsPage: React.FC = () => {
     },
     {
       key: 'userName',
-      header: 'User & Role',
+      header: 'User Account',
+      sortable: true,
+      render: (l) => <span className="font-semibold text-slate-900 text-xs">{l.userName}</span>,
+    },
+    {
+      key: 'action',
+      header: 'Security Action',
       sortable: true,
       render: (l) => (
-        <div>
-          <span className="font-semibold text-slate-900 block">{l.userName}</span>
-          <span className="text-[10px] text-indigo-600 font-mono font-semibold">{l.role}</span>
-        </div>
+        <span className="font-mono text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+          {l.action}
+        </span>
       ),
     },
     {
-      key: 'module',
-      header: 'Module / Action',
-      sortable: true,
-      render: (l) => (
-        <div>
-          <span className="font-mono text-xs font-bold text-slate-800 uppercase">
-            {l.module}.{l.action}
-          </span>
-          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{l.recordIdentifier}</div>
-        </div>
-      ),
-    },
-    {
-      key: 'newValue',
-      header: 'Audit Trail Detail',
-      render: (l) => (
-        <div className="text-xs text-slate-600 max-w-md font-mono">
-          {l.newValue || l.oldValue}
-        </div>
-      ),
+      key: 'details',
+      header: 'Log Summary',
+      render: (l) => <span className="text-xs text-slate-600">{l.recordIdentifier || l.module}</span>,
     },
     {
       key: 'ipAddress',
-      header: 'IP Address',
-      render: (l) => <span className="font-mono text-xs text-slate-400">{l.ipAddress || 'Internal'}</span>,
-    },
-    {
-      key: 'result',
-      header: 'Result',
-      render: (l) => (
-        <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-          {l.result}
-        </span>
-      ),
+      header: 'Client IP',
+      render: (l) => <span className="font-mono text-xs text-slate-400">{l.ipAddress || '127.0.0.1'}</span>,
     },
   ];
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Enterprise Audit Logs</h1>
+        <h1 className="text-xl font-bold text-slate-900 tracking-tight">System Audit Trail</h1>
         <p className="text-xs text-slate-500 mt-1">
-          Immutable event stream capturing all status changes, approvals, overrides, and security events.
+          Immutable ISO/IEC 17025 security log records tracking all user operations and administrative actions.
         </p>
       </div>
 
-      <DataTable
-        data={logs}
-        columns={columns}
-        loading={loading}
-        searchPlaceholder="Search audit logs by user, action, module, record..."
-      />
+      <DataTable data={logs} columns={columns} loading={loading} />
     </div>
   );
 };

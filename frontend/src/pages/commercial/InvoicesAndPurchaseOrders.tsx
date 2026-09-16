@@ -11,28 +11,29 @@ import {
   FileText,
   Printer,
   Download,
+  ArrowLeft,
+  Save,
 } from 'lucide-react';
 import { Invoice, InvoiceType, PurchaseOrder } from '../../types/invoice';
 import { invoiceService, purchaseOrderService } from '../../services/commercialServices';
+import { clientService } from '../../services/clientService';
+import { requestService } from '../../services/requestService';
+import { vendorService } from '../../services/vendorService';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { Modal } from '../../components/modals/AppModals';
 import { SelectInput, TextInput, Textarea } from '../../components/forms/FormControls';
 import { useNotification } from '../../context/NotificationContext';
-import { mockStore } from '../../mock/initialStore';
+import { Client } from '../../types/client';
+import { CalibrationRequest } from '../../types/request';
+import { Vendor } from '../../types/vendor';
 
 export const InvoiceListPage: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
-  // Form states
-  const [invoiceType, setInvoiceType] = useState<InvoiceType>('FULL_REQUEST');
-  const [clientId, setClientId] = useState(mockStore.data.clients[0]?.id || '');
-  const [requestId, setRequestId] = useState(mockStore.data.requests[0]?.id || '');
-  const [notes, setNotes] = useState('');
-
+  const navigate = useNavigate();
   const { showToast } = useNotification();
 
   const loadInvoices = async () => {
@@ -50,18 +51,6 @@ export const InvoiceListPage: React.FC = () => {
   useEffect(() => {
     loadInvoices();
   }, []);
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const created = await invoiceService.create(invoiceType, clientId, requestId, undefined, notes);
-      showToast(`Invoice ${created.invoiceNumber} generated successfully!`, 'success');
-      setCreateModalOpen(false);
-      loadInvoices();
-    } catch {
-      showToast('Failed to create invoice', 'error');
-    }
-  };
 
   const columns: Column<Invoice>[] = [
     {
@@ -111,32 +100,20 @@ export const InvoiceListPage: React.FC = () => {
       render: (i) => <StatusBadge status={i.status} size="sm" />,
     },
     {
-      key: 'isSigned',
-      header: 'Client Signature',
-      render: (i) => (
-        <span
-          className={`font-mono text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-            i.isSigned
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              : 'bg-amber-50 text-amber-800 border-amber-200'
-          }`}
-        >
-          {i.isSigned ? 'SIGNED' : 'PENDING SIGN'}
-        </span>
-      ),
-    },
-    {
       key: 'actions',
       header: 'Actions',
       align: 'right',
       render: (i) => (
         <button
           type="button"
-          onClick={() => setSelectedInvoice(i)}
-          className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg"
-          title="View Invoice"
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedInvoice(i);
+          }}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-teal-700 hover:bg-teal-50 rounded-xl transition"
         >
-          <Eye className="w-4 h-4" />
+          <Eye className="w-3.5 h-3.5" />
+          View Invoice
         </button>
       ),
     },
@@ -144,90 +121,24 @@ export const InvoiceListPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Commercial Invoices</h1>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Tax Invoices</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Supports whole-request billing, partial instruments invoicing, and standalone metrology invoices.
+            Commercial billing records, full-request invoices, advance payments, and digital signatures.
           </p>
         </div>
         <button
           type="button"
-          onClick={() => setCreateModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs"
+          onClick={() => navigate('/invoices/new')}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
         >
           <Plus className="w-4 h-4" />
-          Generate Invoice
+          Generate Tax Invoice
         </button>
       </div>
 
       <DataTable data={invoices} columns={columns} loading={loading} />
-
-      {/* Create Invoice Modal */}
-      <Modal
-        isOpen={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
-        title="Generate Commercial Invoice"
-        maxWidth="max-w-md"
-      >
-        <form onSubmit={handleCreate} className="space-y-4">
-          <SelectInput
-            label="Invoicing Scheme"
-            required
-            value={invoiceType}
-            onChange={(e) => setInvoiceType(e.target.value as InvoiceType)}
-            options={[
-              { value: 'FULL_REQUEST', label: 'Full Request Invoice (All Items)' },
-              { value: 'PARTIAL', label: 'Partial Invoice (Cleared Items Only)' },
-              { value: 'INVOICE_ONLY', label: 'Invoice Only (Direct Commercial)' },
-            ]}
-          />
-
-          <SelectInput
-            label="Client Enterprise"
-            required
-            value={clientId}
-            onChange={(e) => setClientId(e.target.value)}
-            options={mockStore.data.clients.map((c) => ({ value: c.id, label: c.clientName }))}
-          />
-
-          {invoiceType !== 'INVOICE_ONLY' && (
-            <SelectInput
-              label="Calibration Request"
-              required
-              value={requestId}
-              onChange={(e) => setRequestId(e.target.value)}
-              options={mockStore.data.requests.map((r) => ({
-                value: r.id,
-                label: `${r.requestNumber} (${r.items.length} items)`,
-              }))}
-            />
-          )}
-
-          <Textarea
-            label="Invoice Notes / Payment Terms"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Payment due within 30 days via RTGS..."
-          />
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={() => setCreateModalOpen(false)}
-              className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs"
-            >
-              Generate
-            </button>
-          </div>
-        </form>
-      </Modal>
 
       {/* Invoice Viewer Modal */}
       {selectedInvoice && (
@@ -328,9 +239,140 @@ export const InvoiceListPage: React.FC = () => {
   );
 };
 
+export const AddInvoicePage: React.FC = () => {
+  const navigate = useNavigate();
+  const { showToast } = useNotification();
+
+  const [clients, setClients] = useState<Client[]>([]);
+  const [requests, setRequests] = useState<CalibrationRequest[]>([]);
+  const [invoiceType, setInvoiceType] = useState<InvoiceType>('FULL_REQUEST');
+  const [clientId, setClientId] = useState('');
+  const [requestId, setRequestId] = useState('');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    clientService.getAll().then((data) => {
+      setClients(data);
+      if (data.length > 0) setClientId(data[0].id);
+    });
+    requestService.getAll().then((data) => {
+      setRequests(data);
+      if (data.length > 0) setRequestId(data[0].id);
+    });
+  }, []);
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientId) {
+      showToast('Please select a client', 'warning');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const created = await invoiceService.create(invoiceType, clientId, requestId || undefined, undefined, notes);
+      showToast(`Tax Invoice ${created.invoiceNumber} generated successfully!`, 'success');
+      navigate('/commercial/invoices');
+    } catch {
+      showToast('Failed to generate invoice', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/commercial/invoices')}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Invoices
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-subtle space-y-6">
+        <div className="border-b border-slate-100 pb-4">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Generate Tax Invoice</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Create a formal tax invoice linked to a calibration request order or client account.
+          </p>
+        </div>
+
+        <form onSubmit={handleCreate} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SelectInput
+              label="Invoice Billing Type"
+              value={invoiceType}
+              onChange={(e) => setInvoiceType(e.target.value as InvoiceType)}
+              options={[
+                { value: 'FULL_REQUEST', label: 'Full Request Order Billing' },
+                { value: 'PARTIAL', label: 'Partial Completed Items Billing' },
+                { value: 'INVOICE_ONLY', label: 'Standalone Direct Invoice' },
+              ]}
+            />
+
+            <SelectInput
+              label="Client Enterprise"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              options={clients.map((c) => ({
+                value: c.id,
+                label: `${c.clientName} (${c.clientCode})`,
+              }))}
+            />
+          </div>
+
+          {invoiceType !== 'INVOICE_ONLY' && (
+            <SelectInput
+              label="Linked Calibration Request"
+              value={requestId}
+              onChange={(e) => setRequestId(e.target.value)}
+              options={requests.map((r) => ({
+                value: r.id,
+                label: `${r.requestNumber} - ${r.clientName} (${r.items.length} items)`,
+              }))}
+            />
+          )}
+
+          <Textarea
+            label="Invoice Notes & Payment Terms"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Payment terms: Due within 30 days via RTGS / NEFT. Mention GSTIN for tax credit..."
+          />
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => navigate('/commercial/invoices')}
+              className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              <span>Generate Tax Invoice</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 export const PurchaseOrderListPage: React.FC = () => {
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     purchaseOrderService.getAll().then((data) => {
@@ -381,14 +423,157 @@ export const PurchaseOrderListPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900 tracking-tight">Purchase Orders</h1>
-        <p className="text-xs text-slate-500 mt-1">
-          Track outsourcing purchase orders to external accredited laboratories and standard parts vendors.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Purchase Orders</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Track outsourcing purchase orders to external accredited laboratories and standard parts vendors.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigate('/purchase-orders/new')}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
+        >
+          <Plus className="w-4 h-4" />
+          Issue Purchase Order
+        </button>
       </div>
 
       <DataTable data={orders} columns={columns} loading={loading} />
+    </div>
+  );
+};
+
+export const AddPurchaseOrderPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { showToast } = useNotification();
+
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [requests, setRequests] = useState<CalibrationRequest[]>([]);
+  const [vendorId, setVendorId] = useState('');
+  const [requestId, setRequestId] = useState('');
+  const [expectedDate, setExpectedDate] = useState(
+    new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
+  );
+  const [amount, setAmount] = useState('15000');
+  const [remarks, setRemarks] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    vendorService.getAll().then((data) => {
+      setVendors(data);
+      if (data.length > 0) setVendorId(data[0].id);
+    });
+    requestService.getAll().then((data) => {
+      setRequests(data);
+      if (data.length > 0) setRequestId(data[0].id);
+    });
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendorId) {
+      showToast('Please select a vendor', 'warning');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      showToast('Purchase Order issued successfully!', 'success');
+      navigate('/commercial/purchase-orders');
+    } catch {
+      showToast('Failed to issue purchase order', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => navigate('/commercial/purchase-orders')}
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Purchase Orders
+        </button>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-subtle space-y-6">
+        <div className="border-b border-slate-100 pb-4">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Issue Purchase Order</h1>
+          <p className="text-xs text-slate-500 mt-1">
+            Create an official outsourcing PO for external accredited partner labs or supplier vendors.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SelectInput
+              label="Supplier Vendor"
+              value={vendorId}
+              onChange={(e) => setVendorId(e.target.value)}
+              options={vendors.map((v) => ({
+                value: v.id,
+                label: `${v.vendorName} (${v.vendorCode})`,
+              }))}
+            />
+
+            <SelectInput
+              label="Linked Calibration Request"
+              value={requestId}
+              onChange={(e) => setRequestId(e.target.value)}
+              options={requests.map((r) => ({
+                value: r.id,
+                label: `${r.requestNumber} - ${r.clientName}`,
+              }))}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <TextInput
+              type="date"
+              label="Expected Delivery Date"
+              value={expectedDate}
+              onChange={(e) => setExpectedDate(e.target.value)}
+            />
+            <TextInput
+              type="number"
+              label="Total PO Amount (₹)"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+
+          <Textarea
+            label="Outsourcing Instructions / Remarks"
+            value={remarks}
+            onChange={(e) => setRemarks(e.target.value)}
+            placeholder="Specify calibration standards, NABL traceability scope, packaging requirements..."
+          />
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => navigate('/commercial/purchase-orders')}
+              className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition disabled:opacity-50"
+            >
+              <Save className="w-4 h-4" />
+              <span>Issue Purchase Order</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };
