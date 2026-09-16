@@ -11,8 +11,10 @@ import {
   Package,
   Send,
   ArrowRight,
+  Receipt,
 } from 'lucide-react';
 import { requestService } from '../../services/requestService';
+import { quotationService } from '../../services/commercialServices';
 import { useNotification } from '../../context/NotificationContext';
 import { mockStore } from '../../mock/initialStore';
 import { RequestPriority } from '../../types/request';
@@ -124,6 +126,71 @@ export const CollectionPage: React.FC = () => {
     }
   };
 
+  const handleRaiseQuotation = async () => {
+    if (!clientId) {
+      showToast('Please select a client entity first', 'warning');
+      return;
+    }
+    if (draftItems.length === 0) {
+      showToast('At least one item must be included to raise a quotation', 'warning');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // 1. Create the base calibration request
+      const created = await requestService.create({
+        clientId,
+        collectionDate,
+        priority,
+        remarks: remarks ? `${remarks} (Direct Quotation Raised)` : 'Quotation raised directly from request intake form',
+        items: draftItems.map((d) => ({
+          itemId: d.itemId,
+          serialNumber: d.serialNumber,
+          quantity: d.quantity,
+          itemAvailable: d.itemAvailable,
+          availabilityRemarks: d.availabilityRemarks,
+        })),
+      });
+
+      // 2. Map items with standard pricing and tax for the quotation
+      const quotationItems = draftItems.map((d) => {
+        const itemObj = mockStore.data.items.find((i) => i.id === d.itemId);
+        return {
+          itemId: d.itemId,
+          itemName: itemObj?.itemName || 'Calibrated Instrument',
+          itemCode: itemObj?.itemCode || 'ITM-001',
+          description: `Calibration service for ${itemObj?.itemName || 'Instrument'} (SN: ${d.serialNumber})`,
+          standardCost: itemObj?.standardCost || 1200,
+          quantity: d.quantity,
+          taxRate: 18,
+        };
+      });
+
+      // 3. Directly create/raise the commercial quotation
+      const quotation = await quotationService.create({
+        clientId,
+        requestId: created.id,
+        validUntil: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+        currency: 'INR',
+        discountAmount: 0,
+        remarks: `Quotation raised directly from Request Form for ${created.requestNumber}`,
+        items: quotationItems,
+      });
+
+      // 4. Update request status to QUOTATION
+      await requestService.updateStatus(created.id, 'QUOTATION', `Quotation ${quotation.quotationNumber} raised`);
+
+      showToast(`Quotation ${quotation.quotationNumber} raised successfully for Request ${created.requestNumber}!`, 'success');
+      navigate(`/requests/${created.id}?tab=commercial`);
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to raise quotation', 'error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -188,6 +255,32 @@ export const CollectionPage: React.FC = () => {
             onChange={(e) => setRemarks(e.target.value)}
             placeholder="e.g. Received with special wooden carrying cases from Tool Room Bay 2"
           />
+
+          {/* Quotation Generation Action Field */}
+          <div className="p-4 bg-gradient-to-br from-emerald-50/90 to-teal-50/70 border border-emerald-200/90 rounded-2xl space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                <Receipt className="w-3.5 h-3.5 text-emerald-700" />
+                Quotation Generation
+              </span>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/90 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Instant Action
+              </span>
+            </div>
+            <p className="text-[11px] text-emerald-800 leading-relaxed">
+              Click below to generate a commercial quotation with standard calibration rates and 18% GST immediately for this request.
+            </p>
+            <button
+              type="button"
+              id="raise-quotation-field-btn"
+              onClick={handleRaiseQuotation}
+              disabled={submitting || draftItems.length === 0}
+              className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Receipt className="w-4 h-4" />
+              <span>{submitting ? 'Raising Quotation...' : 'Raise Quotation'}</span>
+            </button>
+          </div>
 
           <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-900 leading-relaxed">
             <span className="font-bold block mb-1">Architectural Rule:</span>
@@ -350,19 +443,32 @@ export const CollectionPage: React.FC = () => {
               </div>
             )}
 
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-3">
               <span className="text-xs text-slate-500 font-medium">
                 Total Instruments: <strong className="text-slate-800">{draftItems.reduce((a, c) => a + c.quantity, 0)}</strong>
               </span>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitting || draftItems.length === 0}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-md transition flex items-center gap-2"
-              >
-                {submitting ? 'Submitting...' : 'Create Request & Submit to Lab Queue'}
-                <Send className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  id="raise-quotation-footer-btn"
+                  onClick={handleRaiseQuotation}
+                  disabled={submitting || draftItems.length === 0}
+                  className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition flex items-center gap-2 cursor-pointer"
+                >
+                  <Receipt className="w-4 h-4" />
+                  <span>{submitting ? 'Raising Quotation...' : 'Raise Quotation'}</span>
+                </button>
+                <button
+                  type="button"
+                  id="submit-request-btn"
+                  onClick={handleSubmit}
+                  disabled={submitting || draftItems.length === 0}
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-md transition flex items-center gap-2 cursor-pointer"
+                >
+                  {submitting ? 'Submitting...' : 'Create Request & Submit to Lab Queue'}
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

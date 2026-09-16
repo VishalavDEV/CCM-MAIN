@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Receipt,
   Plus,
@@ -123,27 +123,48 @@ export const QuotationListPage: React.FC = () => {
 };
 
 export const QuotationCreatePage: React.FC = () => {
-  const [clientId, setClientId] = useState(mockStore.data.clients[0]?.id || '');
-  const [requestId, setRequestId] = useState(mockStore.data.requests[0]?.id || '');
+  const [searchParams] = useSearchParams();
+  const queryReqId = searchParams.get('requestId') || '';
+  const preReq = queryReqId ? mockStore.data.requests.find((r) => r.id === queryReqId) : undefined;
+
+  const [clientId, setClientId] = useState(preReq?.clientId || mockStore.data.clients[0]?.id || '');
+  const [requestId, setRequestId] = useState(preReq?.id || mockStore.data.requests[0]?.id || '');
   const [validUntil, setValidUntil] = useState(
     new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
   );
   const [discountAmount, setDiscountAmount] = useState(0);
-  const [remarks, setRemarks] = useState('');
+  const [remarks, setRemarks] = useState(preReq ? `Quotation draft for Request ${preReq.requestNumber}` : '');
 
   // Items table
-  const [items, setItems] = useState<any[]>([
-    {
-      itemId: mockStore.data.items[0]?.id,
-      itemName: mockStore.data.items[0]?.itemName,
-      itemCode: mockStore.data.items[0]?.itemCode,
-      standardCost: mockStore.data.items[0]?.standardCost,
-      overrideCost: undefined,
-      overrideReason: '',
-      quantity: 1,
-      taxRate: 18,
-    },
-  ]);
+  const [items, setItems] = useState<any[]>(() => {
+    if (preReq && preReq.items.length > 0) {
+      return preReq.items.map((it) => {
+        const itemObj = mockStore.data.items.find((i) => i.id === it.itemId);
+        return {
+          itemId: it.itemId,
+          itemName: it.itemName || itemObj?.itemName || 'Instrument',
+          itemCode: it.itemCode || itemObj?.itemCode || 'ITM-001',
+          standardCost: it.standardCost || itemObj?.standardCost || 1200,
+          overrideCost: undefined,
+          overrideReason: '',
+          quantity: it.requestedQuantity || 1,
+          taxRate: 18,
+        };
+      });
+    }
+    return [
+      {
+        itemId: mockStore.data.items[0]?.id,
+        itemName: mockStore.data.items[0]?.itemName,
+        itemCode: mockStore.data.items[0]?.itemCode,
+        standardCost: mockStore.data.items[0]?.standardCost,
+        overrideCost: undefined,
+        overrideReason: '',
+        quantity: 1,
+        taxRate: 18,
+      },
+    ];
+  });
 
   const navigate = useNavigate();
   const { showToast } = useNotification();

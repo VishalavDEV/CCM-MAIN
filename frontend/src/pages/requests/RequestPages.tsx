@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ClipboardList,
   Plus,
@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { CalibrationRequest, RequestStatus, RequestPriority } from '../../types/request';
 import { requestService } from '../../services/requestService';
+import { quotationService } from '../../services/commercialServices';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { RequestWorkflowTracker } from '../../components/workflow/RequestWorkflowTracker';
@@ -206,12 +207,22 @@ export const RequestListPage: React.FC = () => {
 // THE CENTRAL COMMAND WORKSPACE
 export const RequestDetailPage: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
+  const [searchParams] = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'overview';
   const [request, setRequest] = useState<CalibrationRequest | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('overview');
+  const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [loading, setLoading] = useState(true);
+  const [raisingQuotation, setRaisingQuotation] = useState(false);
 
   const navigate = useNavigate();
   const { showToast } = useNotification();
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   const loadRequest = async () => {
     if (!requestId) return;
@@ -229,6 +240,45 @@ export const RequestDetailPage: React.FC = () => {
   useEffect(() => {
     loadRequest();
   }, [requestId]);
+
+  const handleRaiseQuotation = async () => {
+    if (!request) return;
+    setRaisingQuotation(true);
+    try {
+      const quotationItems = request.items.map((it) => {
+        const itemObj = mockStore.data.items.find((i) => i.id === it.itemId);
+        return {
+          itemId: it.itemId,
+          itemName: it.itemName || itemObj?.itemName || 'Calibrated Instrument',
+          itemCode: it.itemCode || itemObj?.itemCode || 'ITM-001',
+          description: `Calibration service for ${it.itemName} (SN: ${it.serialNumber})`,
+          standardCost: it.standardCost || itemObj?.standardCost || 1200,
+          quantity: it.requestedQuantity || 1,
+          taxRate: 18,
+        };
+      });
+
+      const quotation = await quotationService.create({
+        clientId: request.clientId,
+        requestId: request.id,
+        validUntil: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+        currency: 'INR',
+        discountAmount: 0,
+        remarks: `Quotation raised directly for Request ${request.requestNumber}`,
+        items: quotationItems,
+      });
+
+      await requestService.updateStatus(request.id, 'QUOTATION', `Quotation ${quotation.quotationNumber} raised`);
+      showToast(`Quotation ${quotation.quotationNumber} raised successfully for ${request.requestNumber}!`, 'success');
+      await loadRequest();
+      setActiveTab('commercial');
+    } catch (err) {
+      console.error(err);
+      showToast('Failed to raise quotation', 'error');
+    } finally {
+      setRaisingQuotation(false);
+    }
+  };
 
   if (loading || !request) {
     return <div className="text-center py-16 text-xs text-slate-400">Loading Request Command Workspace...</div>;
@@ -309,12 +359,35 @@ export const RequestDetailPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Dynamic Status-Driven Action Button */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        {/* Dynamic Action Buttons */}
+        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+          {!linkedQuotation ? (
+            <button
+              type="button"
+              id="header-raise-quotation-btn"
+              onClick={handleRaiseQuotation}
+              disabled={raisingQuotation}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <Receipt className="w-4 h-4" />
+              <span>{raisingQuotation ? 'Raising Quotation...' : 'Raise Quotation'}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              id="header-view-quotation-btn"
+              onClick={() => setActiveTab('commercial')}
+              className="px-3.5 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <Receipt className="w-4 h-4 text-emerald-600" />
+              <span>Quotation: {linkedQuotation.quotationNumber}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={handleStatusAction}
-            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/20 transition flex items-center gap-2"
+            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-md shadow-indigo-600/20 transition flex items-center gap-2 cursor-pointer"
           >
             <span>{STATUS_UI_ACTIONS[request.status]?.actionText || 'Proceed Next Step'}</span>
             <ArrowRight className="w-4 h-4" />
@@ -397,11 +470,27 @@ export const RequestDetailPage: React.FC = () => {
                   {request.items.filter((i) => i.itemStatus === 'PENDING' || i.calibrationStatus === 'IN_PROGRESS').length}
                 </span>
               </div>
-              <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 text-center">
-                <span className="text-[10px] text-indigo-700 font-bold uppercase block">Est Commercial</span>
-                <span className="text-sm font-mono font-bold text-indigo-900 mt-1 block">
-                  ₹{request.items.reduce((a, c) => a + (c.overrideCost || c.standardCost), 0).toLocaleString()}
-                </span>
+              <div className="p-3 rounded-xl bg-indigo-50/70 border border-indigo-100 text-center flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] text-indigo-700 font-bold uppercase block">Est Commercial</span>
+                  <span className="text-sm font-mono font-bold text-indigo-900 mt-1 block">
+                    ₹{request.items.reduce((a, c) => a + (c.overrideCost || c.standardCost), 0).toLocaleString()}
+                  </span>
+                </div>
+                {!linkedQuotation ? (
+                  <button
+                    type="button"
+                    onClick={handleRaiseQuotation}
+                    disabled={raisingQuotation}
+                    className="mt-2 text-[10px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-100/80 hover:bg-emerald-200/80 py-1 px-2 rounded-lg transition cursor-pointer"
+                  >
+                    Raise Quotation
+                  </button>
+                ) : (
+                  <span className="mt-2 text-[9px] font-bold text-emerald-700 bg-emerald-100/60 py-0.5 px-1.5 rounded">
+                    {linkedQuotation.quotationNumber}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -568,46 +657,130 @@ export const RequestDetailPage: React.FC = () => {
       {/* Tab 6: Quotation */}
       {activeTab === 'commercial' && (
         <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-subtle space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3 flex-wrap gap-2">
             <div>
               <h3 className="text-sm font-bold text-slate-900">Commercial Quotation</h3>
               <p className="text-xs text-slate-500">
-                Standard pricing vs overrides with audit tracking.
+                Standard pricing, 18% GST calculation, and commercial sign-off.
               </p>
             </div>
-            {!linkedQuotation && (
-              <button
-                type="button"
-                onClick={() => navigate('/commercial/quotations/new')}
-                className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold shadow-xs"
-              >
-                + Generate Quotation
-              </button>
+            {!linkedQuotation ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  id="tab-raise-quotation-btn"
+                  onClick={handleRaiseQuotation}
+                  disabled={raisingQuotation}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Receipt className="w-4 h-4" />
+                  <span>{raisingQuotation ? 'Raising Quotation...' : 'Raise Quotation'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/commercial/quotations/new?requestId=${request.id}`)}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
+                >
+                  Custom Draft
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/commercial/quotations/${linkedQuotation.id}`)}
+                  className="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Full Commercial View
+                </button>
+              </div>
             )}
           </div>
 
           {linkedQuotation ? (
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 text-xs space-y-3">
-              <div className="flex items-center justify-between">
+            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-200/70 pb-3">
                 <div>
-                  <span className="font-mono font-bold text-indigo-700 text-sm">
+                  <span className="font-mono font-bold text-indigo-700 text-base">
                     {linkedQuotation.quotationNumber}
                   </span>
-                  <span className="text-slate-500 block text-[11px]">Date: {linkedQuotation.quotationDate}</span>
+                  <span className="text-slate-500 block text-[11px] mt-0.5">
+                    Date: {linkedQuotation.quotationDate} • Valid Until: {linkedQuotation.validUntil}
+                  </span>
                 </div>
-                <StatusBadge status={linkedQuotation.status} size="sm" />
+                <StatusBadge status={linkedQuotation.status} size="md" />
               </div>
 
-              <div className="pt-2 border-t border-slate-200/60 flex justify-between font-mono text-xs">
-                <span>Total Quotation Value:</span>
-                <span className="font-bold text-slate-900 text-sm">
-                  ₹ {linkedQuotation.totalAmount.toLocaleString()} INR
-                </span>
+              {/* Line items summary */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500 font-semibold">
+                      <th className="py-2">Item Description</th>
+                      <th className="py-2 text-center">Qty</th>
+                      <th className="py-2 text-right">Standard Rate</th>
+                      <th className="py-2 text-right">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200/50">
+                    {linkedQuotation.items.map((qi) => (
+                      <tr key={qi.id}>
+                        <td className="py-2">
+                          <span className="font-semibold text-slate-800">{qi.itemName}</span>
+                          <span className="text-[10px] text-slate-400 block font-mono">{qi.itemCode}</span>
+                        </td>
+                        <td className="py-2 text-center font-mono">{qi.quantity}</td>
+                        <td className="py-2 text-right font-mono">₹ {(qi.overrideCost || qi.standardCost).toLocaleString()}</td>
+                        <td className="py-2 text-right font-mono font-semibold">₹ {qi.totalAmount.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 space-y-1.5 max-w-xs ml-auto font-mono text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Subtotal:</span>
+                  <span>₹ {linkedQuotation.subtotal.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>GST (18%):</span>
+                  <span>₹ {linkedQuotation.taxAmount.toLocaleString()}</span>
+                </div>
+                {linkedQuotation.discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-600">
+                    <span>Discount:</span>
+                    <span>- ₹ {linkedQuotation.discountAmount.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-900 font-bold text-sm pt-2 border-t border-slate-300">
+                  <span>Total Value:</span>
+                  <span>₹ {linkedQuotation.totalAmount.toLocaleString()} {linkedQuotation.currency}</span>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-xs text-slate-400">
-              No commercial quotation has been generated for this request yet.
+            <div className="text-center py-10 px-4 bg-slate-50/50 rounded-2xl border border-dashed border-slate-300 text-xs space-y-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-700">No Commercial Quotation Raised Yet</p>
+                <p className="text-slate-400 mt-1 max-w-sm mx-auto">
+                  Click below to immediately raise an official quotation for all instruments in this request with standard lab calibration rates and 18% GST.
+                </p>
+              </div>
+              <button
+                type="button"
+                id="empty-raise-quotation-btn"
+                onClick={handleRaiseQuotation}
+                disabled={raisingQuotation}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-md shadow-emerald-600/20 transition inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Receipt className="w-4 h-4" />
+                <span>{raisingQuotation ? 'Raising Quotation...' : 'Raise Quotation Now'}</span>
+              </button>
             </div>
           )}
         </div>
