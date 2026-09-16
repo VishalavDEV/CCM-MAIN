@@ -24,7 +24,9 @@ import {
 } from 'lucide-react';
 import { CalibrationRequest, RequestStatus, RequestPriority } from '../../types/request';
 import { requestService } from '../../services/requestService';
-import { quotationService } from '../../services/commercialServices';
+import { quotationService, invoiceService, purchaseOrderService } from '../../services/commercialServices';
+import { dispatchService, signatureService, auditService } from '../../services/executionServices';
+import { itemService } from '../../services/clientService';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { RequestWorkflowTracker } from '../../components/workflow/RequestWorkflowTracker';
@@ -32,7 +34,6 @@ import { DocumentManager } from '../../components/documents/DocumentManager';
 import { AuditTimeline } from '../../components/workflow/AuditTimeline';
 import { STATUS_UI_ACTIONS } from '../../constants/workflow';
 import { useNotification } from '../../context/NotificationContext';
-import { mockStore } from '../../mock/initialStore';
 
 export const RequestListPage: React.FC = () => {
   const [requests, setRequests] = useState<CalibrationRequest[]>([]);
@@ -214,6 +215,12 @@ export const RequestDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [raisingQuotation, setRaisingQuotation] = useState(false);
 
+  const [linkedQuotation, setLinkedQuotation] = useState<any>(null);
+  const [linkedInvoice, setLinkedInvoice] = useState<any>(null);
+  const [linkedDispatch, setLinkedDispatch] = useState<any>(null);
+  const [linkedSignatures, setLinkedSignatures] = useState<any[]>([]);
+  const [requestAuditLogs, setRequestAuditLogs] = useState<any[]>([]);
+
   const navigate = useNavigate();
   const { showToast } = useNotification();
 
@@ -230,6 +237,32 @@ export const RequestDetailPage: React.FC = () => {
     try {
       const data = await requestService.getById(requestId);
       setRequest(data);
+
+      if (data) {
+        const [quots, invs, disps, sigs, audits] = await Promise.all([
+          quotationService.getAll(),
+          invoiceService.getAll(),
+          dispatchService.getAll(),
+          signatureService.getAll(),
+          auditService.getAll(),
+        ]);
+
+        const q = quots.find((x) => x.requestId === data.id || x.requestNumber === data.requestNumber);
+        const inv = invs.find((x) => x.requestId === data.id || x.requestNumber === data.requestNumber);
+        const disp = disps.find((x) => x.requestId === data.id || x.requestNumber === data.requestNumber);
+        const sigList = sigs.filter(
+          (s) => s.referenceNumber === inv?.invoiceNumber || s.referenceNumber === disp?.dispatchNumber
+        );
+        const auditList = audits.filter(
+          (a) => a.recordId === data.id || a.recordIdentifier === data.requestNumber
+        );
+
+        setLinkedQuotation(q || null);
+        setLinkedInvoice(inv || null);
+        setLinkedDispatch(disp || null);
+        setLinkedSignatures(sigList);
+        setRequestAuditLogs(auditList);
+      }
     } catch {
       showToast('Unable to load request details', 'error');
     } finally {
@@ -245,14 +278,15 @@ export const RequestDetailPage: React.FC = () => {
     if (!request) return;
     setRaisingQuotation(true);
     try {
+      const itemsList = await itemService.getAll();
       const quotationItems = request.items.map((it) => {
-        const itemObj = mockStore.data.items.find((i) => i.id === it.itemId);
+        const itemObj = itemsList.find((i) => i.id === it.itemId);
         return {
           itemId: it.itemId,
           itemName: it.itemName || itemObj?.itemName || 'Calibrated Instrument',
           itemCode: it.itemCode || itemObj?.itemCode || 'ITM-001',
           description: `Calibration service for ${it.itemName} (SN: ${it.serialNumber})`,
-          standardCost: it.standardCost || itemObj?.standardCost || 1200,
+          standardCost: Number(it.standardCost || itemObj?.standardCost) || 1200,
           quantity: it.requestedQuantity || 1,
           taxRate: 18,
         };
@@ -283,23 +317,6 @@ export const RequestDetailPage: React.FC = () => {
   if (loading || !request) {
     return <div className="text-center py-16 text-xs text-slate-400">Loading Request Command Workspace...</div>;
   }
-
-  // Linked entities
-  const linkedQuotation = mockStore.data.quotations.find(
-    (q) => q.requestId === request.id || q.requestNumber === request.requestNumber
-  );
-  const linkedInvoice = mockStore.data.invoices.find(
-    (i) => i.requestId === request.id || i.requestNumber === request.requestNumber
-  );
-  const linkedDispatch = mockStore.data.dispatches.find(
-    (d) => d.requestId === request.id || d.requestNumber === request.requestNumber
-  );
-  const linkedSignatures = mockStore.data.signatures.filter(
-    (s) => s.referenceNumber === linkedInvoice?.invoiceNumber || s.referenceNumber === linkedDispatch?.dispatchNumber
-  );
-  const requestAuditLogs = mockStore.data.auditLogs.filter(
-    (a) => a.recordId === request.id || a.recordIdentifier === request.requestNumber
-  );
 
   // Status Action Handler
   const handleStatusAction = () => {
@@ -724,7 +741,7 @@ export const RequestDetailPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200/50">
-                    {linkedQuotation.items.map((qi) => (
+                    {linkedQuotation.items.map((qi: any) => (
                       <tr key={qi.id}>
                         <td className="py-2">
                           <span className="font-semibold text-slate-800">{qi.itemName}</span>

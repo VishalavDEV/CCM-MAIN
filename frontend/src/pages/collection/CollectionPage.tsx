@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Layers,
@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { requestService } from '../../services/requestService';
 import { quotationService } from '../../services/commercialServices';
+import { clientService, itemService } from '../../services/clientService';
 import { useNotification } from '../../context/NotificationContext';
-import { mockStore } from '../../mock/initialStore';
 import { RequestPriority } from '../../types/request';
 import { TextInput, SelectInput, Textarea } from '../../components/forms/FormControls';
 
@@ -30,35 +30,57 @@ interface RequestDraftItem {
 }
 
 export const CollectionPage: React.FC = () => {
-  const [clientId, setClientId] = useState(mockStore.data.clients[0]?.id || '');
+  const [clientsList, setClientsList] = useState<any[]>([]);
+  const [itemsList, setItemsList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [clientId, setClientId] = useState('');
   const [collectionDate, setCollectionDate] = useState(new Date().toISOString().split('T')[0]);
   const [priority, setPriority] = useState<RequestPriority>('NORMAL');
   const [remarks, setRemarks] = useState('');
 
   // Item selector states
-  const [selectedItemId, setSelectedItemId] = useState(mockStore.data.items[0]?.id || '');
+  const [selectedItemId, setSelectedItemId] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [itemAvailable, setItemAvailable] = useState<'YES' | 'NO'>('YES');
   const [availabilityRemarks, setAvailabilityRemarks] = useState('');
 
   // Multi-item list
-  const [draftItems, setDraftItems] = useState<RequestDraftItem[]>([
-    {
-      tempId: 'draft-1',
-      itemId: mockStore.data.items[0]?.id || '',
-      serialNumber: 'SN-TATA-CAL-881',
-      quantity: 1,
-      itemAvailable: 'YES',
-    },
-    {
-      tempId: 'draft-2',
-      itemId: mockStore.data.items[1]?.id || '',
-      serialNumber: 'SN-TATA-MIC-882',
-      quantity: 1,
-      itemAvailable: 'YES',
-    },
-  ]);
+  const [draftItems, setDraftItems] = useState<RequestDraftItem[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([clientService.getAll(), itemService.getAll()]).then(([cList, iList]) => {
+      if (!isMounted) return;
+      setClientsList(cList || []);
+      setItemsList(iList || []);
+
+      if (cList && cList.length > 0) {
+        setClientId(cList[0].id);
+      }
+      if (iList && iList.length > 0) {
+        setSelectedItemId(iList[0].id);
+        setDraftItems([
+          {
+            tempId: 'draft-1',
+            itemId: iList[0].id,
+            serialNumber: 'SN-CAL-881',
+            quantity: 1,
+            itemAvailable: 'YES',
+          },
+        ]);
+      }
+      setLoading(false);
+    }).catch(err => {
+      console.error('Error fetching collection data:', err);
+      if (isMounted) setLoading(false);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -155,7 +177,7 @@ export const CollectionPage: React.FC = () => {
 
       // 2. Map items with standard pricing and tax for the quotation
       const quotationItems = draftItems.map((d) => {
-        const itemObj = mockStore.data.items.find((i) => i.id === d.itemId);
+        const itemObj = itemsList.find((i) => i.id === d.itemId);
         return {
           itemId: d.itemId,
           itemName: itemObj?.itemName || 'Calibrated Instrument',
@@ -224,7 +246,7 @@ export const CollectionPage: React.FC = () => {
             required
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
-            options={mockStore.data.clients.map((c) => ({
+            options={clientsList.map((c) => ({
               value: c.id,
               label: `${c.clientName} (${c.clientCode})`,
             }))}
@@ -302,7 +324,7 @@ export const CollectionPage: React.FC = () => {
                 required
                 value={selectedItemId}
                 onChange={(e) => setSelectedItemId(e.target.value)}
-                options={mockStore.data.items.map((i) => ({
+                options={itemsList.map((i) => ({
                   value: i.id,
                   label: `${i.itemName} (${i.manufacturer} - ${i.measurementRange})`,
                 }))}
@@ -396,7 +418,7 @@ export const CollectionPage: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {draftItems.map((di) => {
-                      const itemObj = mockStore.data.items.find((i) => i.id === di.itemId);
+                      const itemObj = itemsList.find((i) => i.id === di.itemId);
                       return (
                         <tr key={di.tempId} className="hover:bg-slate-50 transition">
                           <td className="px-5 py-3">
