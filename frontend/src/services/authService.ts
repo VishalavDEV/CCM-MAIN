@@ -1,5 +1,5 @@
-import { User } from '../types/user';
-import { mockStore } from '../mock/initialStore';
+import { User, UserRole } from '../types/user';
+import { createJwtForRole } from '../lib/auth/demoTokens';
 
 export interface LoginResponse {
   token: string;
@@ -8,21 +8,75 @@ export interface LoginResponse {
   organizationId: string;
 }
 
+const SYSTEM_ACCOUNTS: Record<string, { fullName: string; role: UserRole; roleName: string }> = {
+  'admin@apexmetrology.com': {
+    fullName: 'Apex Super Admin',
+    role: 'SUPER_ADMIN',
+    roleName: 'Super Administrator'
+  },
+  'bvnethra2005@gmail.com': {
+    fullName: 'Nethra BV (Admin)',
+    role: 'ADMIN',
+    roleName: 'System Administrator'
+  },
+  'priya.s@apexmetrology.com': {
+    fullName: 'Priya S (Lab Tech)',
+    role: 'LAB_USER',
+    roleName: 'Calibration Engineer'
+  },
+  'rajesh.k@apexmetrology.com': {
+    fullName: 'Rajesh K (Collection Agent)',
+    role: 'COLLECTION_AGENT',
+    roleName: 'Field Collection Agent'
+  },
+  'amit.v@apexmetrology.com': {
+    fullName: 'Amit V (Commercial User)',
+    role: 'COMMERCIAL_USER',
+    roleName: 'Commercial Manager'
+  },
+  'vikram.m@apexmetrology.com': {
+    fullName: 'Dr. Vikram M (Approver)',
+    role: 'APPROVER',
+    roleName: 'Quality Approver'
+  }
+};
+
+export function createUserForEmail(email: string): User {
+  const normalized = email.trim().toLowerCase();
+  const known = SYSTEM_ACCOUNTS[normalized];
+
+  const role: UserRole = known ? known.role : 'ADMIN';
+  const roleName = known ? known.roleName : 'Administrator';
+  const fullName = known ? known.fullName : (email.split('@')[0].toUpperCase() + ' User');
+
+  return {
+    id: '00000000-0000-0000-0000-000000000001',
+    fullName,
+    email: normalized,
+    phone: '+91 9876543210',
+    tenantId: '00000000-0000-0000-0000-000000000001',
+    tenantName: 'Apex Metrology Group',
+    organizationId: '00000000-0000-0000-0000-000000000001',
+    organizationName: 'Apex Precision Labs Bangalore',
+    roleId: '00000000-0000-0000-0000-000000000001',
+    role,
+    roleName,
+    status: 'ACTIVE',
+    createdAt: new Date().toISOString().split('T')[0]
+  };
+}
+
 export const authService = {
   async login(email: string, _password?: string): Promise<LoginResponse> {
-    await new Promise((res) => setTimeout(res, 250)); // realistic network delay
-    const user = mockStore.data.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+    await new Promise((res) => setTimeout(res, 200));
     
-    if (!user) {
-      throw new Error('Invalid email or password. Please check your credentials.');
+    if (!email || !email.trim()) {
+      throw new Error('Please enter a valid email address');
     }
 
-    if (user.status !== 'ACTIVE') {
-      throw new Error('Account is suspended or inactive. Contact your administrator.');
-    }
+    const user = createUserForEmail(email);
+    const token = await createJwtForRole(user.role, user.email);
 
-    // Simulate JWT token
-    const token = `mock-jwt-token-${user.id}-${Date.now()}`;
     return {
       token,
       user,
@@ -32,9 +86,7 @@ export const authService = {
   },
 
   async getCurrentUser(userId: string): Promise<User | null> {
-    await new Promise((res) => setTimeout(res, 100));
-    const user = mockStore.data.users.find((u) => u.id === userId);
-    return user || null;
+    return createUserForEmail('bvnethra2005@gmail.com');
   },
 
   async logout(): Promise<void> {

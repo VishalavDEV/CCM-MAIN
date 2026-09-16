@@ -1,9 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { User, UserRole } from '../types/user';
 import { Tenant } from '../types/tenant';
 import { Organization } from '../types/organization';
-import { mockStore } from '../mock/initialStore';
-import { authService } from '../services/authService';
+import { authService, createUserForEmail } from '../services/authService';
 
 interface AuthContextType {
   user: User | null;
@@ -18,17 +17,59 @@ interface AuthContextType {
   switchOrganization: (orgId: string) => void;
 }
 
+const DEFAULT_TENANT: Tenant = {
+  id: '00000000-0000-0000-0000-000000000001',
+  name: 'Apex Metrology Group',
+  code: 'APEX',
+  status: 'ACTIVE',
+  organizationsCount: 1,
+  usersCount: 5,
+  contactEmail: 'contact@apexmetrology.com',
+  contactPhone: '+91 80 2845 0001',
+  createdDate: '2025-01-15',
+  updatedDate: '2026-09-10',
+  description: 'Primary Calibration Laboratory Network'
+};
+
+const DEFAULT_ORGANIZATION: Organization = {
+  id: '00000000-0000-0000-0000-000000000001',
+  tenantId: '00000000-0000-0000-0000-000000000001',
+  companyName: 'Apex Precision Labs Bangalore',
+  companyCode: 'APX-BLR',
+  companyType: 'Private Limited',
+  businessType: 'Calibration',
+  registrationNumber: 'U74999KA2020PTC139822',
+  gstNumber: '29AAACA1234F1Z5',
+  companyEmail: 'bangalore.lab@apexmetrology.com',
+  companyPhone: '+91 80 4123 7890',
+  addressLine1: 'Plot 42, Electronic City Phase 1',
+  addressLine2: 'Hosur Road',
+  city: 'Bengaluru',
+  state: 'Karnataka',
+  country: 'India',
+  pincode: '560100',
+  timezone: 'Asia/Kolkata (IST)',
+  currency: 'INR (₹)',
+  numberOfBranches: 1,
+  numberOfWarehouses: 1,
+  msmeNumber: 'UDYAM-KR-03-0028192',
+  adminName: 'Nethra BV',
+  adminEmail: 'bvnethra2005@gmail.com',
+  status: 'ACTIVE',
+  createdDate: '2025-02-01',
+  usersCount: 5
+};
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Default to Super Admin / Admin for rich exploration, or retrieve from localStorage
   const [user, setUser] = useState<User | null>(() => {
-    return mockStore.data.users[0] || null;
+    return createUserForEmail('bvnethra2005@gmail.com');
   });
   const [token, setToken] = useState<string | null>('mock-jwt-token-active');
 
-  const currentTenant = mockStore.data.tenants.find((t) => t.id === user?.tenantId) || mockStore.data.tenants[0] || null;
-  const currentOrganization = mockStore.data.organizations.find((o) => o.id === user?.organizationId) || mockStore.data.organizations[0] || null;
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(DEFAULT_TENANT);
+  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(DEFAULT_ORGANIZATION);
 
   const login = async (email: string, password?: string) => {
     const res = await authService.login(email, password);
@@ -41,43 +82,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
   };
 
-  // Instant role switcher for evaluator convenience
   const switchRole = (newRole: UserRole) => {
-    const targetUser = mockStore.data.users.find((u) => u.role === newRole);
-    if (targetUser) {
-      setUser({ ...targetUser });
-    } else if (user) {
-      // Synthetic role switch
-      const roleObj = mockStore.data.roles.find((r) => r.name.toUpperCase().replace(/\s+/g, '_') === newRole);
-      setUser({
-        ...user,
-        role: newRole,
-        roleName: roleObj?.name || newRole,
-      });
-    }
+    if (!user) return;
+    const roleName = newRole.replace('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+    setUser({
+      ...user,
+      role: newRole,
+      roleName: `${roleName} User`
+    });
   };
 
   const switchTenant = (tenantId: string) => {
-    const t = mockStore.data.tenants.find((item) => item.id === tenantId);
-    if (t && user) {
-      const defaultOrg = mockStore.data.organizations.find((o) => o.tenantId === t.id);
+    if (user) {
       setUser({
         ...user,
-        tenantId: t.id,
-        tenantName: t.name,
-        organizationId: defaultOrg?.id || user.organizationId,
-        organizationName: defaultOrg?.companyName || user.organizationName,
+        tenantId,
+        tenantName: 'Primary Tenant'
       });
     }
   };
 
   const switchOrganization = (orgId: string) => {
-    const org = mockStore.data.organizations.find((o) => o.id === orgId);
-    if (org && user) {
+    if (user) {
       setUser({
         ...user,
-        organizationId: org.id,
-        organizationName: org.companyName,
+        organizationId: orgId,
+        organizationName: 'Primary Organization'
       });
     }
   };
