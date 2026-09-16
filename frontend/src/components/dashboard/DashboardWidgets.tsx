@@ -150,8 +150,34 @@ export const WorkQueueWidget: React.FC = () => {
       ];
       break;
 
-    case 'ADMIN':
     case 'SUPER_ADMIN':
+      title = 'Enterprise Platform Governance';
+      queueItems = [
+        {
+          title: 'Active Multi-Tenant Accounts',
+          count: mockStore.data.tenants.length,
+          route: '/admin/tenants',
+          urgency: 'Governance',
+        },
+        {
+          title: 'Registered Organizations / Labs',
+          count: mockStore.data.organizations.length,
+          route: '/admin/organizations',
+        },
+        {
+          title: 'Provisioned System Users',
+          count: mockStore.data.users.length,
+          route: '/admin/users',
+        },
+        {
+          title: 'Roles & Access Policies',
+          count: mockStore.data.roles.length,
+          route: '/admin/roles',
+        },
+      ];
+      break;
+
+    case 'ADMIN':
     default:
       title = 'Operational Exceptions & Fast Actions';
       queueItems = [

@@ -1,8 +1,13 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types/user';
 import { Tenant } from '../types/tenant';
 import { Organization } from '../types/organization';
 import { authService, createUserForEmail } from '../services/authService';
+
+export const AUTH_USER_CACHE_KEY = 'ccm_user_cache';
+export const AUTH_TOKEN_CACHE_KEY = 'ccm_auth_token';
+export const AUTH_TENANT_CACHE_KEY = 'ccm_tenant_cache';
+export const AUTH_ORG_CACHE_KEY = 'ccm_org_cache';
 
 interface AuthContextType {
   user: User | null;
@@ -63,52 +68,110 @@ const DEFAULT_ORGANIZATION: Organization = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Initialize user from localStorage cache if available, preserving active session across URL changes and page reloads
   const [user, setUser] = useState<User | null>(() => {
+    try {
+      const cached = localStorage.getItem(AUTH_USER_CACHE_KEY);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {
+      console.warn('[Auth Cache] Failed to read user from cache', e);
+    }
     return createUserForEmail('bvnethra2005@gmail.com');
   });
-  const [token, setToken] = useState<string | null>('mock-jwt-token-active');
 
-  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(DEFAULT_TENANT);
-  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(DEFAULT_ORGANIZATION);
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(AUTH_TOKEN_CACHE_KEY) || 'mock-jwt-token-active';
+    } catch (e) {
+      return 'mock-jwt-token-active';
+    }
+  });
+
+  const [currentTenant, setCurrentTenant] = useState<Tenant | null>(() => {
+    try {
+      const cached = localStorage.getItem(AUTH_TENANT_CACHE_KEY);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return DEFAULT_TENANT;
+  });
+
+  const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(() => {
+    try {
+      const cached = localStorage.getItem(AUTH_ORG_CACHE_KEY);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {}
+    return DEFAULT_ORGANIZATION;
+  });
 
   const login = async (email: string, password?: string) => {
     const res = await authService.login(email, password);
     setUser(res.user);
     setToken(res.token);
+
+    // Save session in cache
+    try {
+      localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(res.user));
+      localStorage.setItem(AUTH_TOKEN_CACHE_KEY, res.token);
+    } catch (e) {
+      console.warn('[Auth Cache] Failed to cache user session', e);
+    }
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
+    try {
+      localStorage.removeItem(AUTH_USER_CACHE_KEY);
+      localStorage.removeItem(AUTH_TOKEN_CACHE_KEY);
+      localStorage.removeItem(AUTH_TENANT_CACHE_KEY);
+      localStorage.removeItem(AUTH_ORG_CACHE_KEY);
+      localStorage.removeItem('ccm_permissions_cache');
+    } catch (e) {
+      console.warn('[Auth Cache] Failed to clear user cache on logout', e);
+    }
   };
 
   const switchRole = (newRole: UserRole) => {
     if (!user) return;
     const roleName = newRole.replace('_', ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
-    setUser({
+    const updated = {
       ...user,
       role: newRole,
       roleName: `${roleName} User`
-    });
+    };
+    setUser(updated);
+    try {
+      localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(updated));
+    } catch (e) {}
   };
 
   const switchTenant = (tenantId: string) => {
     if (user) {
-      setUser({
+      const updated = {
         ...user,
         tenantId,
         tenantName: 'Primary Tenant'
-      });
+      };
+      setUser(updated);
+      try {
+        localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(updated));
+      } catch (e) {}
     }
   };
 
   const switchOrganization = (orgId: string) => {
     if (user) {
-      setUser({
+      const updated = {
         ...user,
         organizationId: orgId,
         organizationName: 'Primary Organization'
-      });
+      };
+      setUser(updated);
+      try {
+        localStorage.setItem(AUTH_USER_CACHE_KEY, JSON.stringify(updated));
+      } catch (e) {}
     }
   };
 
