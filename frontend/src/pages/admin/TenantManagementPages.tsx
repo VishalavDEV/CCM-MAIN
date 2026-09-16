@@ -5,18 +5,29 @@ import {
   Plus,
   Edit2,
   Trash2,
-  Power,
   Eye,
   Building,
   Users,
   Shield,
   Activity,
-  History,
   CheckCircle,
+  CheckCircle2,
   ArrowLeft,
+  ArrowRight,
   Save,
+  MapPin,
+  Boxes,
+  KeyRound,
+  FileText,
+  Lock,
+  Globe,
+  DollarSign,
+  Clock,
+  Phone,
+  Mail,
+  Hash,
 } from 'lucide-react';
-import { Tenant, TenantFormData } from '../../types/tenant';
+import { Tenant, TenantFormData, TenantType } from '../../types/tenant';
 import { tenantService } from '../../services/tenantService';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
@@ -53,7 +64,7 @@ export const TenantListPage: React.FC = () => {
     if (!tenantToDelete) return;
     try {
       await tenantService.delete(tenantToDelete.id);
-      showToast('Tenant deleted', 'info');
+      showToast('Tenant deleted successfully', 'info');
       setDeleteModalOpen(false);
       setTenantToDelete(null);
       loadTenants();
@@ -65,31 +76,74 @@ export const TenantListPage: React.FC = () => {
   const columns: Column<Tenant>[] = [
     {
       key: 'name',
-      header: 'Tenant Group',
+      header: 'Tenant Entity',
       sortable: true,
       render: (t) => (
         <div>
           <span className="font-semibold text-slate-900 block text-xs">{t.name}</span>
-          <span className="text-[11px] text-slate-400 font-mono">Code: {t.code}</span>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <span className="text-[10px] text-indigo-700 font-mono font-bold bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200/50">
+              {t.code}
+            </span>
+            <span className="text-[10px] text-slate-400 font-medium">
+              {t.tenantType || 'Enterprise'}
+            </span>
+          </div>
         </div>
       ),
     },
     {
-      key: 'organizationsCount',
-      header: 'Facilities',
+      key: 'gstNumber',
+      header: 'Identifiers',
       render: (t) => (
-        <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">
-          {t.organizationsCount} Org Labs
-        </span>
+        <div className="text-xs space-y-0.5">
+          {t.gstNumber && (
+            <div className="font-mono text-[11px] text-slate-700 font-semibold">
+              GST: {t.gstNumber}
+            </div>
+          )}
+          {t.registrationNumber && (
+            <div className="text-[10px] text-slate-400 font-mono">
+              Reg: {t.registrationNumber}
+            </div>
+          )}
+          {!t.gstNumber && !t.registrationNumber && (
+            <span className="text-[11px] text-slate-400 italic">Not specified</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'city',
+      header: 'Address / Location',
+      render: (t) => (
+        <div className="text-xs text-slate-600">
+          <div>{t.city ? `${t.city}, ${t.state}` : 'Headquarters'}</div>
+          <span className="text-[10px] text-slate-400">{t.country || 'India'}</span>
+        </div>
       ),
     },
     {
       key: 'contactEmail',
-      header: 'Contact',
+      header: 'Contact Info',
       render: (t) => (
         <div className="text-xs text-slate-600">
           <div>{t.contactEmail}</div>
           <span className="text-[10px] text-slate-400 font-mono">{t.contactPhone}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'numberOfBranches',
+      header: 'Setup & Scale',
+      render: (t) => (
+        <div className="text-xs space-y-0.5">
+          <span className="font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded text-[11px] inline-block">
+            {t.numberOfBranches || 1} Branches
+          </span>
+          <div className="text-[10px] text-slate-400">
+            {t.organizationsCount || 0} Registered Labs
+          </div>
         </div>
       ),
     },
@@ -107,8 +161,8 @@ export const TenantListPage: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate(`/admin/tenants/${t.id}`)}
-            className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg transition"
-            title="View Details"
+            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+            title="View Tenant Details"
           >
             <Eye className="w-4 h-4" />
           </button>
@@ -148,7 +202,7 @@ export const TenantListPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/admin/tenants/new')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           Onboard New Tenant
@@ -163,7 +217,7 @@ export const TenantListPage: React.FC = () => {
         onConfirm={handleDelete}
         title="Delete Tenant Group"
         itemName={tenantToDelete?.name}
-        message="Are you sure you want to permanently remove this enterprise tenant?"
+        message="Are you sure you want to permanently remove this enterprise tenant? All linked organizations will be affected."
       />
     </div>
   );
@@ -176,12 +230,37 @@ export const AddTenantPage: React.FC = () => {
   const navigate = useNavigate();
   const { showToast } = useNotification();
   const [submitting, setSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<TenantFormData>({
+    // 1. Tenant Info
     name: '',
     code: '',
+    tenantType: 'Enterprise',
+    registrationNumber: '',
+    gstNumber: '',
     contactEmail: '',
     contactPhone: '',
+
+    // 2. Address Details
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    country: 'India',
+    pincode: '',
+    timezone: 'Asia/Kolkata (IST)',
+    currency: 'INR (₹)',
+
+    // 3. Inventory Setup
+    numberOfBranches: 1,
+
+    // 4. Administration
+    adminName: '',
+    adminEmail: '',
+    adminPassword: '',
+
     status: 'ACTIVE',
     description: '',
   });
@@ -193,8 +272,23 @@ export const AddTenantPage: React.FC = () => {
           setFormData({
             name: t.name,
             code: t.code,
+            tenantType: t.tenantType || 'Enterprise',
+            registrationNumber: t.registrationNumber || '',
+            gstNumber: t.gstNumber || '',
             contactEmail: t.contactEmail,
             contactPhone: t.contactPhone,
+            addressLine1: t.addressLine1 || '',
+            addressLine2: t.addressLine2 || '',
+            city: t.city || '',
+            state: t.state || '',
+            country: t.country || 'India',
+            pincode: t.pincode || '',
+            timezone: t.timezone || 'Asia/Kolkata (IST)',
+            currency: t.currency || 'INR (₹)',
+            numberOfBranches: t.numberOfBranches || 1,
+            adminName: t.adminName || '',
+            adminEmail: t.adminEmail || '',
+            adminPassword: '',
             status: t.status,
             description: t.description || '',
           });
@@ -203,10 +297,67 @@ export const AddTenantPage: React.FC = () => {
     }
   }, [id, isEdit]);
 
+  const stepsList = [
+    { num: 1, title: 'Tenant Info', icon: <Building2 className="w-4 h-4" /> },
+    { num: 2, title: 'Address Details', icon: <MapPin className="w-4 h-4" /> },
+    { num: 3, title: 'Inventory Setup', icon: <Boxes className="w-4 h-4" /> },
+    { num: 4, title: 'Administration', icon: <KeyRound className="w-4 h-4" /> },
+    { num: 5, title: 'Review & Confirm', icon: <CheckCircle className="w-4 h-4" /> },
+  ];
+
+  const validateStep = (stepNumber: number): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (stepNumber === 1) {
+      if (!formData.name.trim()) newErrors.name = 'Tenant name is required';
+      if (!formData.code.trim()) newErrors.code = 'Tenant ID/Code is required';
+      if (!formData.contactEmail.trim()) newErrors.contactEmail = 'Tenant email is required';
+      if (!formData.contactPhone.trim()) newErrors.contactPhone = 'Tenant phone number is required';
+      if (formData.gstNumber && formData.gstNumber.trim().length !== 15) {
+        newErrors.gstNumber = 'GST number must be 15 alphanumeric characters';
+      }
+    }
+
+    if (stepNumber === 2) {
+      if (!formData.addressLine1.trim()) newErrors.addressLine1 = 'Address line 1 is required';
+      if (!formData.city.trim()) newErrors.city = 'City is required';
+      if (!formData.state.trim()) newErrors.state = 'State is required';
+      if (!formData.pincode.trim()) newErrors.pincode = 'Pincode is required';
+    }
+
+    if (stepNumber === 3) {
+      if (formData.numberOfBranches < 1) newErrors.numberOfBranches = 'At least 1 branch is required';
+    }
+
+    if (stepNumber === 4) {
+      if (!formData.adminName.trim()) newErrors.adminName = 'Administrator name is required';
+      if (!formData.adminEmail.trim()) newErrors.adminEmail = 'Administrator email is required';
+      if (!isEdit && !formData.adminPassword) {
+        newErrors.adminPassword = 'Password is required for tenant administrator account';
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleNext = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep((prev) => Math.min(prev + 1, 5));
+    } else {
+      showToast('Please complete required fields before proceeding', 'warning');
+    }
+  };
+
+  const handleBack = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 1));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.code.trim()) {
-      showToast('Tenant name and code are required', 'warning');
+    // Validate all steps
+    if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4)) {
+      showToast('Please fix validation errors before submitting', 'error');
       return;
     }
 
@@ -217,7 +368,7 @@ export const AddTenantPage: React.FC = () => {
         showToast('Tenant profile updated successfully', 'success');
       } else {
         await tenantService.create(formData);
-        showToast('New enterprise tenant onboarded', 'success');
+        showToast('Enterprise Tenant onboarded successfully', 'success');
       }
       navigate('/admin/tenants');
     } catch {
@@ -229,97 +380,598 @@ export const AddTenantPage: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Top Header */}
       <div className="flex items-center justify-between">
+        <div>
+          <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-indigo-200/60">
+            Tenant Onboarding Wizard
+          </span>
+          <h1 className="text-xl font-bold text-slate-900 mt-1.5">
+            {isEdit ? 'Edit Tenant Profile' : 'Enterprise Tenant Onboarding'}
+          </h1>
+          <p className="text-xs text-slate-500">
+            Provision a multi-tenant enterprise account with regional, inventory, and administration settings.
+          </p>
+        </div>
         <button
           type="button"
           onClick={() => navigate('/admin/tenants')}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl transition cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Tenants
+          <span>Cancel</span>
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-subtle space-y-6">
-        <div className="border-b border-slate-100 pb-4">
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
-            {isEdit ? 'Edit Tenant Profile' : 'Onboard New Enterprise Tenant'}
-          </h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Provision a top-level enterprise tenant group for multi-facility calibration management.
-          </p>
+      {/* Stepper Navigation */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-subtle overflow-x-auto">
+        <div className="flex items-center justify-between min-w-[620px]">
+          {stepsList.map((s, idx) => {
+            const isCompleted = currentStep > s.num;
+            const isCurrent = currentStep === s.num;
+
+            return (
+              <React.Fragment key={s.num}>
+                <div
+                  className="flex items-center gap-2.5 cursor-pointer"
+                  onClick={() => {
+                    if (s.num < currentStep) setCurrentStep(s.num);
+                  }}
+                >
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition ${
+                      isCompleted
+                        ? 'bg-emerald-600 text-white'
+                        : isCurrent
+                        ? 'bg-indigo-600 text-white ring-4 ring-indigo-100'
+                        : 'bg-slate-100 text-slate-400'
+                    }`}
+                  >
+                    {isCompleted ? <CheckCircle2 className="w-4 h-4" /> : s.num}
+                  </div>
+                  <span
+                    className={`text-xs ${
+                      isCurrent
+                        ? 'font-bold text-slate-900'
+                        : isCompleted
+                        ? 'font-semibold text-emerald-700'
+                        : 'text-slate-400 font-medium'
+                    }`}
+                  >
+                    {s.title}
+                  </span>
+                </div>
+                {idx < stepsList.length - 1 && <div className="flex-1 h-0.5 bg-slate-200 mx-3" />}
+              </React.Fragment>
+            );
+          })}
         </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* Wizard Form Content */}
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-subtle">
+        {/* STEP 1: TENANT INFO */}
+        {currentStep === 1 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2 text-indigo-600">
+                <Building2 className="w-5 h-5" />
+                <h3 className="text-base font-bold text-slate-900">Step 1 — Tenant Information</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Specify primary legal identity, corporate identifiers, and organizational contact credentials.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TextInput
+                label="1. Tenant Name"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Apex Metrology Group"
+                error={errors.name}
+              />
+              <TextInput
+                label="2. Tenant ID / CODE"
+                required
+                value={formData.code}
+                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                placeholder="e.g. APEX"
+                helperText="Unique uppercase prefix used across tenant facilities"
+                error={errors.code}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SelectInput
+                label="3. Tenant Type"
+                required
+                value={formData.tenantType}
+                onChange={(e) => setFormData({ ...formData, tenantType: e.target.value })}
+                options={[
+                  { value: 'Enterprise', label: 'Enterprise Network' },
+                  { value: 'Calibration Laboratory Network', label: 'Calibration Laboratory Network' },
+                  { value: 'Private Limited', label: 'Private Limited Company' },
+                  { value: 'Public Limited', label: 'Public Limited Company' },
+                  { value: 'Partnership', label: 'Partnership Firm' },
+                  { value: 'Proprietorship', label: 'Proprietorship' },
+                  { value: 'OEM Group', label: 'OEM Calibration Partner' },
+                  { value: 'Subcontract Partner', label: 'Subcontract Calibration Partner' },
+                ]}
+              />
+              <TextInput
+                label="4. Registration Number"
+                value={formData.registrationNumber}
+                onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
+                placeholder="e.g. CIN-U74999KA2020PTC139822"
+                helperText="Corporate Identification / Registrar of Companies"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TextInput
+                label="5. GST Number"
+                value={formData.gstNumber}
+                onChange={(e) => setFormData({ ...formData, gstNumber: e.target.value.toUpperCase() })}
+                placeholder="e.g. 29AAACA1234F1Z5"
+                helperText="15-character GSTIN for billing and tax invoices"
+                error={errors.gstNumber}
+              />
+              <TextInput
+                type="email"
+                label="6. Tenant Email"
+                required
+                value={formData.contactEmail}
+                onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                placeholder="contact@apexmetrology.com"
+                error={errors.contactEmail}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TextInput
+                label="7. Tenant Phone Number"
+                required
+                value={formData.contactPhone}
+                onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                placeholder="+91 80 2845 0001"
+                error={errors.contactPhone}
+              />
+              <SelectInput
+                label="Tenant Status"
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                options={[
+                  { value: 'ACTIVE', label: 'Active (Production Access)' },
+                  { value: 'INACTIVE', label: 'Inactive' },
+                  { value: 'SUSPENDED', label: 'Suspended' },
+                ]}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* STEP 2: ADDRESS DETAILS */}
+        {currentStep === 2 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2 text-indigo-600">
+                <MapPin className="w-5 h-5" />
+                <h3 className="text-base font-bold text-slate-900">Step 2 — Address Details</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Physical headquarters address, regional timezone, and default invoicing currency.
+              </p>
+            </div>
+
             <TextInput
-              label="Tenant Name"
+              label="1. Address Line 1"
               required
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Apex Metrology Group"
+              value={formData.addressLine1}
+              onChange={(e) => setFormData({ ...formData, addressLine1: e.target.value })}
+              placeholder="Building No, Plot / Sector, Industrial Area"
+              error={errors.addressLine1}
             />
+
             <TextInput
-              label="Tenant Identifier Code"
-              required
-              value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-              placeholder="e.g. APEX"
+              label="2. Address Line 2"
+              value={formData.addressLine2}
+              onChange={(e) => setFormData({ ...formData, addressLine2: e.target.value })}
+              placeholder="Street Name, Landmark, Main Road"
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TextInput
+                label="3. City"
+                required
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                placeholder="e.g. Bengaluru"
+                error={errors.city}
+              />
+              <TextInput
+                label="4. State"
+                required
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                placeholder="e.g. Karnataka"
+                error={errors.state}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TextInput
+                label="5. Country"
+                required
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                placeholder="India"
+              />
+              <TextInput
+                label="6. Pincode / Postal Code"
+                required
+                value={formData.pincode}
+                onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                placeholder="e.g. 560100"
+                error={errors.pincode}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <SelectInput
+                label="7. Timezone"
+                required
+                value={formData.timezone}
+                onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
+                options={[
+                  { value: 'Asia/Kolkata (IST)', label: 'Asia/Kolkata (IST, UTC+05:30)' },
+                  { value: 'UTC', label: 'Coordinated Universal Time (UTC)' },
+                  { value: 'America/New_York (EST)', label: 'America/New_York (EST, UTC-05:00)' },
+                  { value: 'Europe/London (GMT)', label: 'Europe/London (GMT, UTC+00:00)' },
+                  { value: 'Asia/Dubai (GST)', label: 'Asia/Dubai (GST, UTC+04:00)' },
+                  { value: 'Asia/Singapore (SGT)', label: 'Asia/Singapore (SGT, UTC+08:00)' },
+                ]}
+              />
+              <SelectInput
+                label="8. Currency"
+                required
+                value={formData.currency}
+                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                options={[
+                  { value: 'INR (₹)', label: 'INR (₹) - Indian Rupee' },
+                  { value: 'USD ($)', label: 'USD ($) - US Dollar' },
+                  { value: 'EUR (€)', label: 'EUR (€) - Euro' },
+                  { value: 'GBP (£)', label: 'GBP (£) - British Pound' },
+                  { value: 'AED (د.إ)', label: 'AED (د.إ) - UAE Dirham' },
+                  { value: 'SGD ($)', label: 'SGD ($) - Singapore Dollar' },
+                ]}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: INVENTORY SETUP */}
+        {currentStep === 3 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2 text-indigo-600">
+                <Boxes className="w-5 h-5" />
+                <h3 className="text-base font-bold text-slate-900">Step 3 — Inventory Setup</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Configure facility network topology, inventory branches, and operational scope.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TextInput
+                type="number"
+                label="1. Number of Branches"
+                required
+                value={formData.numberOfBranches.toString()}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    numberOfBranches: Math.max(1, parseInt(e.target.value, 10) || 1),
+                  })
+                }
+                min={1}
+                max={50}
+                placeholder="1"
+                helperText="Total branch facilities or testing centers under this tenant"
+                error={errors.numberOfBranches}
+              />
+              <div className="p-4 bg-indigo-50/70 rounded-2xl border border-indigo-100 flex items-start gap-3">
+                <Boxes className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-indigo-900">
+                  <span className="font-bold block mb-1">Multi-Branch Inventory Routing</span>
+                  Each branch acts as a physical stock & calibration handling center. Organizations
+                  and equipment intake requests can be segregated across these branches.
+                </div>
+              </div>
+            </div>
+
+            <Textarea
+              label="Tenant Business Notes / Description"
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Primary calibration laboratory network capabilities, accreditation scopes (NABL ISO/IEC 17025), and business specialization..."
             />
           </div>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <TextInput
-              type="email"
-              label="Corporate Contact Email"
-              value={formData.contactEmail}
-              onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-              placeholder="contact@company.com"
-            />
-            <TextInput
-              label="Contact Phone"
-              value={formData.contactPhone}
-              onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-              placeholder="+91 80 2845 0001"
-            />
+        {/* STEP 4: ADMINISTRATION */}
+        {currentStep === 4 && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="border-b border-slate-100 pb-3 mb-4">
+              <div className="flex items-center gap-2 text-indigo-600">
+                <KeyRound className="w-5 h-5" />
+                <h3 className="text-base font-bold text-slate-900">Step 4 — Administration</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Set up the master administrator credentials for this enterprise tenant account.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <TextInput
+                label="1. Admin Name"
+                required
+                value={formData.adminName}
+                onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
+                placeholder="e.g. Apex Super Admin"
+                error={errors.adminName}
+              />
+              <TextInput
+                type="email"
+                label="2. Admin Email"
+                required
+                value={formData.adminEmail}
+                onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+                placeholder="admin@apexmetrology.com"
+                helperText="Login email for the tenant platform administrator"
+                error={errors.adminEmail}
+              />
+            </div>
+
+            {!isEdit && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <TextInput
+                  type="password"
+                  label="3. Password"
+                  required
+                  value={formData.adminPassword || ''}
+                  onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+                  placeholder="••••••••••••"
+                  helperText="Minimum 8 characters with letters, numbers, and symbols"
+                  error={errors.adminPassword}
+                />
+                <div className="p-4 bg-amber-50/80 rounded-2xl border border-amber-200/80 flex items-start gap-3">
+                  <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-900">
+                    <span className="font-bold block mb-1">Administrative Privileges</span>
+                    This user will receive full governance access to provision organizations,
+                    manage staff roles, and oversee calibration operations for this tenant.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* STEP 5: REVIEW & CONFIRM */}
+        {currentStep === 5 && (
+          <div className="space-y-6 animate-fade-in">
+            <div className="border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 text-emerald-600">
+                <CheckCircle className="w-5 h-5" />
+                <h3 className="text-base font-bold text-slate-900">Step 5 — Review & Confirmation</h3>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Verify all tenant onboarding details across the 4 sections before provisioning.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Section 1 Review */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/70">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-indigo-600" />
+                    1. Tenant Information
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="text-[11px] text-indigo-600 font-semibold hover:underline"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">TENANT NAME:</span>
+                  <span className="font-semibold text-slate-900">{formData.name}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">CODE:</span>
+                    <span className="font-mono font-bold text-indigo-700">{formData.code}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">TYPE:</span>
+                    <span className="text-slate-700">{formData.tenantType}</span>
+                  </div>
+                </div>
+                {formData.registrationNumber && (
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">REG NO:</span>
+                    <span className="font-mono text-slate-700">{formData.registrationNumber}</span>
+                  </div>
+                )}
+                {formData.gstNumber && (
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">GST NO:</span>
+                    <span className="font-mono font-bold text-slate-800">{formData.gstNumber}</span>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">EMAIL:</span>
+                    <span className="text-slate-700">{formData.contactEmail}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">PHONE:</span>
+                    <span className="font-mono text-slate-700">{formData.contactPhone}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2 Review */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/70">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <MapPin className="w-4 h-4 text-emerald-600" />
+                    2. Address Details
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="text-[11px] text-indigo-600 font-semibold hover:underline"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">STREET ADDRESS:</span>
+                  <span className="text-slate-800">
+                    {formData.addressLine1}
+                    {formData.addressLine2 ? `, ${formData.addressLine2}` : ''}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">CITY / STATE:</span>
+                    <span className="text-slate-800">
+                      {formData.city}, {formData.state}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">PINCODE:</span>
+                    <span className="font-mono text-slate-800">{formData.pincode}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">TIMEZONE:</span>
+                    <span className="text-slate-700">{formData.timezone}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">CURRENCY:</span>
+                    <span className="font-bold text-slate-800">{formData.currency}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3 Review */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/70">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <Boxes className="w-4 h-4 text-cyan-600" />
+                    3. Inventory Setup
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="text-[11px] text-indigo-600 font-semibold hover:underline"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">NUMBER OF BRANCHES:</span>
+                  <span className="font-mono font-bold text-slate-900 text-sm">
+                    {formData.numberOfBranches} Branches
+                  </span>
+                </div>
+                {formData.description && (
+                  <div>
+                    <span className="text-slate-400 block text-[10px]">BUSINESS NOTES:</span>
+                    <p className="text-slate-700 line-clamp-2">{formData.description}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Section 4 Review */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2 text-xs">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200/70">
+                  <span className="font-bold text-slate-800 flex items-center gap-1.5">
+                    <KeyRound className="w-4 h-4 text-purple-600" />
+                    4. Administration
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(4)}
+                    className="text-[11px] text-indigo-600 font-semibold hover:underline"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">ADMIN NAME:</span>
+                  <span className="font-semibold text-slate-900">{formData.adminName}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">ADMIN EMAIL:</span>
+                  <span className="text-slate-800">{formData.adminEmail}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px]">STATUS:</span>
+                  <StatusBadge status={formData.status} size="sm" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Wizard Navigation Action Footer */}
+        <div className="flex items-center justify-between gap-3 pt-6 border-t border-slate-100 mt-8">
+          <div>
+            {currentStep > 1 && (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
+              </button>
+            )}
           </div>
 
-          <SelectInput
-            label="Tenant Status"
-            value={formData.status}
-            onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-            options={[
-              { value: 'ACTIVE', label: 'Active' },
-              { value: 'INACTIVE', label: 'Inactive' },
-              { value: 'SUSPENDED', label: 'Suspended' },
-            ]}
-          />
-
-          <Textarea
-            label="Tenant Overview & Business Notes"
-            value={formData.description || ''}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Primary NABL calibration laboratory network description..."
-          />
-
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => navigate('/admin/tenants')}
-              className="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              <span>{isEdit ? 'Save Changes' : 'Onboard Tenant'}</span>
-            </button>
+          <div className="flex items-center gap-3">
+            {currentStep < 5 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-md shadow-indigo-600/20 transition cursor-pointer"
+              >
+                <span>Next: {stepsList[currentStep]?.title || 'Continue'}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleSubmit}
+                className="inline-flex items-center gap-2 px-7 py-2.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/20 transition disabled:opacity-50 cursor-pointer"
+              >
+                <CheckCircle className="w-4 h-4" />
+                <span>{isEdit ? 'Save Changes' : 'Complete Tenant Onboarding'}</span>
+              </button>
+            )}
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
@@ -345,7 +997,7 @@ export const TenantDetailPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate('/admin/tenants')}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Tenants
@@ -353,49 +1005,176 @@ export const TenantDetailPage: React.FC = () => {
         <button
           type="button"
           onClick={() => navigate(`/admin/tenants/edit/${tenant.id}`)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
         >
           <Edit2 className="w-3.5 h-3.5" />
           Edit Tenant
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-subtle space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-subtle space-y-6">
+        {/* Banner Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
           <div>
-            <h1 className="text-xl font-bold text-slate-900">{tenant.name}</h1>
-            <span className="font-mono text-xs text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded font-bold mt-1 inline-block">
-              {tenant.code}
-            </span>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/60">
+                ID: {tenant.code}
+              </span>
+              <span className="text-xs text-slate-500">
+                {tenant.tenantType || 'Enterprise'}
+              </span>
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">{tenant.name}</h1>
           </div>
           <StatusBadge status={tenant.status} />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-          <div>
-            <span className="text-slate-400 block font-semibold text-[10px]">CONTACT EMAIL:</span>
-            <span className="text-slate-800 font-medium">{tenant.contactEmail}</span>
+        {/* 4 Detail Grid Sections */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* 1. Tenant Info */}
+          <div className="bg-slate-50/70 rounded-2xl p-5 border border-slate-200/80 space-y-3">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-slate-200/70">
+              <Building2 className="w-4 h-4 text-indigo-600" />
+              1. Tenant Info
+            </h2>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">TENANT NAME:</span>
+                <span className="font-semibold text-slate-900">{tenant.name}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">TENANT ID / CODE:</span>
+                <span className="font-mono font-bold text-indigo-700">{tenant.code}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">TENANT TYPE:</span>
+                <span className="text-slate-700">{tenant.tenantType || 'Enterprise'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">REGISTRATION NO:</span>
+                <span className="font-mono text-slate-700">{tenant.registrationNumber || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">GST NUMBER:</span>
+                <span className="font-mono font-bold text-slate-800">{tenant.gstNumber || 'N/A'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">TENANT PHONE:</span>
+                <span className="font-mono text-slate-700">{tenant.contactPhone}</span>
+              </div>
+              <div className="col-span-2">
+                <span className="text-slate-400 block text-[10px] font-semibold">TENANT EMAIL:</span>
+                <span className="text-slate-800">{tenant.contactEmail}</span>
+              </div>
+            </div>
           </div>
-          <div>
-            <span className="text-slate-400 block font-semibold text-[10px]">CONTACT PHONE:</span>
-            <span className="text-slate-800 font-mono">{tenant.contactPhone}</span>
+
+          {/* 2. Address Details */}
+          <div className="bg-slate-50/70 rounded-2xl p-5 border border-slate-200/80 space-y-3">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-slate-200/70">
+              <MapPin className="w-4 h-4 text-emerald-600" />
+              2. Address Details
+            </h2>
+            <div className="space-y-2.5 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">LINE 1:</span>
+                <span className="text-slate-800">{tenant.addressLine1 || 'N/A'}</span>
+              </div>
+              {tenant.addressLine2 && (
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold">LINE 2:</span>
+                  <span className="text-slate-800">{tenant.addressLine2}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold">CITY:</span>
+                  <span className="text-slate-800">{tenant.city || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold">STATE:</span>
+                  <span className="text-slate-800">{tenant.state || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold">COUNTRY:</span>
+                  <span className="text-slate-800">{tenant.country || 'India'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold">PINCODE:</span>
+                  <span className="font-mono text-slate-800">{tenant.pincode || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold">TIMEZONE:</span>
+                  <span className="text-slate-700">{tenant.timezone || 'Asia/Kolkata (IST)'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold">CURRENCY:</span>
+                  <span className="font-bold text-slate-800">{tenant.currency || 'INR (₹)'}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <span className="text-slate-400 block font-semibold text-[10px]">ORGANIZATIONS:</span>
-            <span className="text-slate-800 font-bold">{tenant.organizationsCount} Facilities</span>
+
+          {/* 3. Inventory Setup */}
+          <div className="bg-slate-50/70 rounded-2xl p-5 border border-slate-200/80 space-y-3">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-slate-200/70">
+              <Boxes className="w-4 h-4 text-cyan-600" />
+              3. Inventory Setup
+            </h2>
+            <div className="space-y-3 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">NUMBER OF BRANCHES:</span>
+                <span className="font-mono font-bold text-slate-900 text-sm">
+                  {tenant.numberOfBranches || 1} Branches
+                </span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">AFFILIATED FACILITIES:</span>
+                <span className="text-slate-700">
+                  {tenant.organizationsCount || 0} Registered Calibration Laboratories
+                </span>
+              </div>
+              {tenant.description && (
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold mb-1">
+                    OVERVIEW & SCOPE:
+                  </span>
+                  <p className="text-xs text-slate-700 leading-relaxed bg-white p-3 rounded-xl border border-slate-200/60">
+                    {tenant.description}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-          <div>
-            <span className="text-slate-400 block font-semibold text-[10px]">CREATED DATE:</span>
-            <span className="text-slate-800 font-mono">{tenant.createdDate}</span>
+
+          {/* 4. Administration */}
+          <div className="bg-slate-50/70 rounded-2xl p-5 border border-slate-200/80 space-y-3">
+            <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2 pb-2 border-b border-slate-200/70">
+              <KeyRound className="w-4 h-4 text-purple-600" />
+              4. Administration
+            </h2>
+            <div className="space-y-3 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">ADMIN NAME:</span>
+                <span className="font-semibold text-slate-900">{tenant.adminName || 'Super Admin'}</span>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px] font-semibold">ADMIN EMAIL:</span>
+                <span className="text-slate-800">{tenant.adminEmail || tenant.contactEmail}</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t border-slate-200/60">
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold">ONBOARDED DATE:</span>
+                  <span className="font-mono text-slate-600">{tenant.createdDate}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] font-semibold">LAST UPDATED:</span>
+                  <span className="font-mono text-slate-600">{tenant.updatedDate}</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-
-        {tenant.description && (
-          <div className="pt-4 border-t border-slate-100">
-            <span className="text-slate-400 block font-semibold text-[10px] mb-1">DESCRIPTION:</span>
-            <p className="text-xs text-slate-700">{tenant.description}</p>
-          </div>
-        )}
       </div>
     </div>
   );

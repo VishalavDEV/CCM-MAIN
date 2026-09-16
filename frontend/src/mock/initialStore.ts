@@ -35,7 +35,35 @@ export interface AppStore {
   dueList: CalibrationDueItem[];
 }
 
-export const initialTenants: Tenant[] = [];
+export const initialTenants: Tenant[] = [
+  {
+    id: '00000000-0000-0000-0000-000000000001',
+    name: 'Apex Metrology Group',
+    code: 'APEX',
+    tenantType: 'Enterprise',
+    registrationNumber: 'CIN-U74999KA2020PTC139822',
+    gstNumber: '29AAACA1234F1Z5',
+    contactEmail: 'contact@apexmetrology.com',
+    contactPhone: '+91 80 2845 0001',
+    addressLine1: 'Plot 42, Electronic City Phase 1',
+    addressLine2: 'Hosur Road Industrial Corridor',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    country: 'India',
+    pincode: '560100',
+    timezone: 'Asia/Kolkata (IST)',
+    currency: 'INR (₹)',
+    numberOfBranches: 3,
+    adminName: 'Apex Super Admin',
+    adminEmail: 'admin@apexmetrology.com',
+    status: 'ACTIVE',
+    organizationsCount: 1,
+    usersCount: 5,
+    createdDate: '2025-01-15',
+    updatedDate: '2026-09-10',
+    description: 'Primary Calibration Laboratory Network for Aerospace & Precision Engineering',
+  },
+];
 export const initialOrganizations: Organization[] = [];
 export const initialUsers: User[] = [];
 export const initialRoles: Role[] = [];
