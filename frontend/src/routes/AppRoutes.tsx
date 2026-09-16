@@ -65,9 +65,11 @@ export const AppRoutes: React.FC = () => {
         {/* Index redirects to /admin/dashboard */}
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
 
-        {/* Administration */}
+        {/* Administration & Dashboards */}
         <Route path="admin/dashboard" element={<SuperAdminDashboard />} />
+        <Route path="dashboard" element={<SuperAdminDashboard />} />
 
+        {/* Tenants */}
         <Route
           path="admin/tenants"
           element={
@@ -77,7 +79,23 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route
+          path="tenants"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.TENANT_VIEW}>
+              <TenantListPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
           path="admin/tenants/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.TENANT_CREATE}>
+              <AddTenantPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="tenants/new"
           element={
             <PermissionRoute permission={PERMISSION_CODES.TENANT_CREATE}>
               <AddTenantPage />
@@ -100,9 +118,26 @@ export const AppRoutes: React.FC = () => {
             </PermissionRoute>
           }
         />
+        <Route
+          path="tenants/:tenantId"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.TENANT_VIEW}>
+              <TenantDetailPage />
+            </PermissionRoute>
+          }
+        />
 
+        {/* Organizations */}
         <Route
           path="admin/organizations"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
+              <OrganizationListPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="organizations"
           element={
             <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
               <OrganizationListPage />
@@ -118,6 +153,14 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route
+          path="organizations/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_CREATE}>
+              <OrganizationOnboardingWizard />
+            </PermissionRoute>
+          }
+        />
+        <Route
           path="admin/organizations/:id"
           element={
             <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
@@ -125,9 +168,26 @@ export const AppRoutes: React.FC = () => {
             </PermissionRoute>
           }
         />
+        <Route
+          path="organizations/:id"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
+              <OrganizationDetailPage />
+            </PermissionRoute>
+          }
+        />
 
+        {/* Users */}
         <Route
           path="admin/users"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.USER_VIEW}>
+              <UserListPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="users"
           element={
             <PermissionRoute permission={PERMISSION_CODES.USER_VIEW}>
               <UserListPage />
@@ -143,6 +203,14 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route
+          path="users/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.USER_CREATE}>
+              <AddUserPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
           path="admin/users/edit/:id"
           element={
             <PermissionRoute permission={PERMISSION_CODES.USER_UPDATE}>
@@ -151,8 +219,17 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
+        {/* Roles & Permissions */}
         <Route
           path="admin/roles"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ROLE_VIEW}>
+              <RoleListPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="roles"
           element={
             <PermissionRoute permission={PERMISSION_CODES.ROLE_VIEW}>
               <RoleListPage />
@@ -168,6 +245,22 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route
+          path="roles/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ROLE_CREATE}>
+              <RoleFormPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="admin/roles/:id"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ROLE_UPDATE}>
+              <RoleFormPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
           path="admin/roles/:id/edit"
           element={
             <PermissionRoute permission={PERMISSION_CODES.ROLE_UPDATE}>
@@ -177,6 +270,14 @@ export const AppRoutes: React.FC = () => {
         />
         <Route
           path="admin/permissions"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.PERMISSION_VIEW}>
+              <PermissionListPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="permissions"
           element={
             <PermissionRoute permission={PERMISSION_CODES.PERMISSION_VIEW}>
               <PermissionListPage />
@@ -252,6 +353,14 @@ export const AppRoutes: React.FC = () => {
           }
         />
         <Route
+          path="master/items"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.ITEM_VIEW}>
+              <ItemMasterListPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
           path="items/new"
           element={
             <PermissionRoute permission={PERMISSION_CODES.ITEM_CREATE}>
@@ -264,14 +373,6 @@ export const AppRoutes: React.FC = () => {
           element={
             <PermissionRoute permission={PERMISSION_CODES.ITEM_UPDATE}>
               <AddItemPage />
-            </PermissionRoute>
-          }
-        />
-        <Route
-          path="master/items"
-          element={
-            <PermissionRoute permission={PERMISSION_CODES.ITEM_VIEW}>
-              <ItemMasterListPage />
             </PermissionRoute>
           }
         />
@@ -290,6 +391,14 @@ export const AppRoutes: React.FC = () => {
           element={
             <PermissionRoute permission={PERMISSION_CODES.REQUEST_VIEW}>
               <RequestListPage />
+            </PermissionRoute>
+          }
+        />
+        <Route
+          path="requests/new"
+          element={
+            <PermissionRoute permission={PERMISSION_CODES.REQUEST_CREATE}>
+              <CollectionPage />
             </PermissionRoute>
           }
         />
