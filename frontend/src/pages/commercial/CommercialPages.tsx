@@ -18,12 +18,13 @@ import {
 import { Quotation, QuotationFormData } from '../../types/quotation';
 import { ApprovalRecord, PurchaseOrder, Invoice, InvoiceType } from '../../types/invoice';
 import { quotationService, approvalService, purchaseOrderService, invoiceService } from '../../services/commercialServices';
+import { clientService, itemService } from '../../services/clientService';
+import { requestService } from '../../services/requestService';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { ApprovalModal, Modal } from '../../components/modals/AppModals';
 import { TextInput, SelectInput, Textarea } from '../../components/forms/FormControls';
 import { useNotification } from '../../context/NotificationContext';
-import { mockStore } from '../../mock/initialStore';
 
 export const QuotationListPage: React.FC = () => {
   const [quotations, setQuotations] = useState<Quotation[]>([]);
@@ -125,52 +126,102 @@ export const QuotationListPage: React.FC = () => {
 export const QuotationCreatePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const queryReqId = searchParams.get('requestId') || '';
-  const preReq = queryReqId ? mockStore.data.requests.find((r) => r.id === queryReqId) : undefined;
 
-  const [clientId, setClientId] = useState(preReq?.clientId || mockStore.data.clients[0]?.id || '');
-  const [requestId, setRequestId] = useState(preReq?.id || mockStore.data.requests[0]?.id || '');
+  const [loading, setLoading] = useState(true);
+  const [clients, setClients] = useState<any[]>([]);
+  const [requests, setRequests] = useState<any[]>([]);
+  const [catalogItems, setCatalogItems] = useState<any[]>([]);
+
+  const [clientId, setClientId] = useState('');
+  const [requestId, setRequestId] = useState(queryReqId);
   const [validUntil, setValidUntil] = useState(
     new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
   );
   const [discountAmount, setDiscountAmount] = useState(0);
-  const [remarks, setRemarks] = useState(preReq ? `Quotation draft for Request ${preReq.requestNumber}` : '');
-
-  // Items table
-  const [items, setItems] = useState<any[]>(() => {
-    if (preReq && preReq.items.length > 0) {
-      return preReq.items.map((it) => {
-        const itemObj = mockStore.data.items.find((i) => i.id === it.itemId);
-        return {
-          itemId: it.itemId,
-          itemName: it.itemName || itemObj?.itemName || 'Instrument',
-          itemCode: it.itemCode || itemObj?.itemCode || 'ITM-001',
-          standardCost: it.standardCost || itemObj?.standardCost || 1200,
-          overrideCost: undefined,
-          overrideReason: '',
-          quantity: it.requestedQuantity || 1,
-          taxRate: 18,
-        };
-      });
-    }
-    return [
-      {
-        itemId: mockStore.data.items[0]?.id,
-        itemName: mockStore.data.items[0]?.itemName,
-        itemCode: mockStore.data.items[0]?.itemCode,
-        standardCost: mockStore.data.items[0]?.standardCost,
-        overrideCost: undefined,
-        overrideReason: '',
-        quantity: 1,
-        taxRate: 18,
-      },
-    ];
-  });
+  const [remarks, setRemarks] = useState('');
+  const [items, setItems] = useState<any[]>([]);
 
   const navigate = useNavigate();
   const { showToast } = useNotification();
 
+  useEffect(() => {
+    let isMounted = true;
+    Promise.all([
+      clientService.getAll(),
+      requestService.getAll(),
+      itemService.getAll(),
+    ])
+      .then(([cList, rList, iList]) => {
+        if (!isMounted) return;
+        setClients(cList || []);
+        setRequests(rList || []);
+        setCatalogItems(iList || []);
+
+        const targetReq = queryReqId ? rList.find((r) => r.id === queryReqId) : undefined;
+        const initialClient = targetReq?.clientId || cList[0]?.id || '';
+        setClientId(initialClient);
+
+        if (targetReq) {
+          setRequestId(targetReq.id);
+          setRemarks(`Quotation draft for Request ${targetReq.requestNumber}`);
+          if (targetReq.items && targetReq.items.length > 0) {
+            setItems(
+              targetReq.items.map((it: any) => {
+                const itemObj = iList.find((i) => i.id === it.itemId);
+                return {
+                  itemId: it.itemId || itemObj?.id || '',
+                  itemName: it.itemName || itemObj?.itemName || 'Instrument',
+                  itemCode: it.itemCode || itemObj?.itemCode || 'ITM-001',
+                  standardCost: Number(it.standardCost || itemObj?.standardCost) || 1200,
+                  overrideCost: undefined,
+                  overrideReason: '',
+                  quantity: it.requestedQuantity || 1,
+                  taxRate: 18,
+                };
+              })
+            );
+          } else if (iList.length > 0) {
+            setItems([
+              {
+                itemId: iList[0].id,
+                itemName: iList[0].itemName,
+                itemCode: iList[0].itemCode,
+                standardCost: Number(iList[0].standardCost) || 1000,
+                overrideCost: undefined,
+                overrideReason: '',
+                quantity: 1,
+                taxRate: 18,
+              },
+            ]);
+          }
+        } else if (iList.length > 0) {
+          setItems([
+            {
+              itemId: iList[0].id,
+              itemName: iList[0].itemName,
+              itemCode: iList[0].itemCode,
+              standardCost: Number(iList[0].standardCost) || 1000,
+              overrideCost: undefined,
+              overrideReason: '',
+              quantity: 1,
+              taxRate: 18,
+            },
+          ]);
+        }
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Error fetching quotation dependencies:', err);
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [queryReqId]);
+
   const handleAddItem = (itemMasterId: string) => {
-    const it = mockStore.data.items.find((i) => i.id === itemMasterId);
+    const it = catalogItems.find((i) => i.id === itemMasterId);
     if (!it) return;
     setItems([
       ...items,
@@ -178,7 +229,7 @@ export const QuotationCreatePage: React.FC = () => {
         itemId: it.id,
         itemName: it.itemName,
         itemCode: it.itemCode,
-        standardCost: it.standardCost,
+        standardCost: Number(it.standardCost) || 1000,
         overrideCost: undefined,
         overrideReason: '',
         quantity: 1,
@@ -198,11 +249,16 @@ export const QuotationCreatePage: React.FC = () => {
   };
 
   const subtotal = items.reduce(
-    (acc, it) => acc + (it.overrideCost !== undefined && it.overrideCost !== '' ? Number(it.overrideCost) : it.standardCost) * it.quantity,
+    (acc, it) =>
+      acc +
+      (it.overrideCost !== undefined && it.overrideCost !== ''
+        ? Number(it.overrideCost)
+        : Number(it.standardCost) || 0) *
+        (it.quantity || 1),
     0
   );
   const taxAmount = (subtotal * 18) / 100;
-  const total = subtotal + taxAmount - Number(discountAmount);
+  const total = subtotal + taxAmount - Number(discountAmount || 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,9 +267,11 @@ export const QuotationCreatePage: React.FC = () => {
       return;
     }
 
-    // Check if any override has missing reason
     const invalidOverride = items.find(
-      (it) => it.overrideCost !== undefined && it.overrideCost !== '' && (!it.overrideReason || it.overrideReason.trim().length < 3)
+      (it) =>
+        it.overrideCost !== undefined &&
+        it.overrideCost !== '' &&
+        (!it.overrideReason || it.overrideReason.trim().length < 3)
     );
     if (invalidOverride) {
       showToast(
@@ -241,6 +299,14 @@ export const QuotationCreatePage: React.FC = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -267,7 +333,7 @@ export const QuotationCreatePage: React.FC = () => {
               required
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
-              options={mockStore.data.clients.map((c) => ({ value: c.id, label: c.clientName }))}
+              options={clients.map((c) => ({ value: c.id, label: c.clientName }))}
             />
             <SelectInput
               label="Linked Calibration Request"
@@ -275,7 +341,7 @@ export const QuotationCreatePage: React.FC = () => {
               onChange={(e) => setRequestId(e.target.value)}
               options={[
                 { value: '', label: 'Standalone Commercial Proposal' },
-                ...mockStore.data.requests.map((r) => ({
+                ...requests.map((r) => ({
                   value: r.id,
                   label: `${r.requestNumber} (${r.clientName})`,
                 })),
@@ -308,9 +374,9 @@ export const QuotationCreatePage: React.FC = () => {
               className="text-xs py-1.5 px-3 bg-white border border-slate-200 rounded-xl font-medium text-slate-700"
             >
               <option value="">+ Add Item from Catalog...</option>
-              {mockStore.data.items.map((i) => (
+              {catalogItems.map((i) => (
                 <option key={i.id} value={i.id}>
-                  {i.itemName} (Std: ₹{i.standardCost})
+                  {i.itemName} (Std: ₹{(Number(i.standardCost) || 0).toLocaleString()})
                 </option>
               ))}
             </select>
@@ -332,8 +398,9 @@ export const QuotationCreatePage: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {items.map((it, idx) => {
                   const hasOverride = it.overrideCost !== undefined && it.overrideCost !== '';
-                  const rate = hasOverride ? Number(it.overrideCost) : it.standardCost;
-                  const lineTotal = rate * it.quantity;
+                  const stdCost = Number(it.standardCost) || 0;
+                  const rate = hasOverride ? Number(it.overrideCost) : stdCost;
+                  const lineTotal = rate * (it.quantity || 1);
 
                   return (
                     <tr
@@ -354,7 +421,7 @@ export const QuotationCreatePage: React.FC = () => {
                         />
                       </td>
                       <td className="px-4 py-3 font-mono font-medium text-slate-500">
-                        ₹ {it.standardCost.toLocaleString()}
+                        ₹ {stdCost.toLocaleString()}
                       </td>
                       <td className="px-4 py-3">
                         <input
