@@ -8,7 +8,7 @@ export const clientService = {
   async getAll(): Promise<Client[]> {
     try {
       const res = await apiClient.get('/api/master/clients');
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         return res.data.map((c: any) => ({
           id: c.id,
           tenantId: c.tenant_id || c.tenantId || '00000000-0000-0000-0000-000000000001',
@@ -209,7 +209,7 @@ export const vendorService = {
   async getAll(): Promise<Vendor[]> {
     try {
       const res = await apiClient.get('/api/master/vendors');
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         return res.data.map((v: any) => ({
           id: v.id,
           tenantId: v.tenant_id || v.tenantId || '00000000-0000-0000-0000-000000000001',
@@ -400,7 +400,7 @@ export const itemService = {
   async getAll(): Promise<Item[]> {
     try {
       const res = await apiClient.get('/api/master/items');
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         return res.data.map((i: any) => ({
           id: i.id,
           tenantId: i.tenant_id || i.tenantId || '00000000-0000-0000-0000-000000000001',

@@ -1,9 +1,48 @@
 import { Organization, OrganizationFormData } from '../types/organization';
 import { mockStore } from '../mock/initialStore';
+import { apiClient } from '../lib/api/apiClient';
 
 export const organizationService = {
   async getAll(tenantId?: string): Promise<Organization[]> {
-    await new Promise((res) => setTimeout(res, 150));
+    try {
+      const res = await apiClient.get('/api/master/organizations');
+      if (res && res.success && Array.isArray(res.data)) {
+        let orgs = res.data.map((o: any) => ({
+          id: o.id,
+          tenantId: o.tenant_id || o.tenantId || '00000000-0000-0000-0000-000000000001',
+          companyName: o.companyName || o.name || 'Organization',
+          companyCode: o.companyCode || o.code || 'ORG-001',
+          companyType: o.companyType || 'Private Limited',
+          businessType: o.businessType || 'Calibration',
+          registrationNumber: o.registrationNumber || '',
+          gstNumber: o.gstNumber || '',
+          companyEmail: o.companyEmail || o.email || '',
+          companyPhone: o.companyPhone || o.phone || '',
+          addressLine1: o.addressLine1 || '',
+          addressLine2: o.addressLine2 || '',
+          city: o.city || 'Bangalore',
+          state: o.state || 'Karnataka',
+          country: o.country || 'India',
+          pincode: o.pincode || '',
+          timezone: o.timezone || 'Asia/Kolkata (IST)',
+          currency: o.currency || 'INR (₹)',
+          numberOfBranches: Number(o.numberOfBranches) || 1,
+          numberOfWarehouses: Number(o.numberOfWarehouses) || 1,
+          msmeNumber: o.msmeNumber || '',
+          adminName: o.adminName || '',
+          adminEmail: o.adminEmail || '',
+          status: o.status || 'ACTIVE',
+          createdDate: o.created_at?.split('T')[0] || o.createdDate || new Date().toISOString().split('T')[0],
+          usersCount: o.usersCount || 0,
+        }));
+        if (tenantId) {
+          orgs = orgs.filter((o: Organization) => o.tenantId === tenantId);
+        }
+        return orgs;
+      }
+    } catch (err) {
+      console.warn('organizationService.getAll API warning:', err);
+    }
     if (tenantId) {
       return mockStore.data.organizations.filter((o) => o.tenantId === tenantId);
     }
@@ -11,13 +50,12 @@ export const organizationService = {
   },
 
   async getById(id: string): Promise<Organization | null> {
-    await new Promise((res) => setTimeout(res, 100));
-    const org = mockStore.data.organizations.find((o) => o.id === id);
+    const list = await this.getAll();
+    const org = list.find((o) => o.id === id);
     return org ? { ...org } : null;
   },
 
   async create(data: OrganizationFormData): Promise<Organization> {
-    await new Promise((res) => setTimeout(res, 250));
     const newOrg: Organization = {
       id: `org-${Date.now()}`,
       tenantId: data.tenantId,
@@ -47,49 +85,37 @@ export const organizationService = {
       usersCount: 1,
     };
     mockStore.data.organizations.unshift(newOrg);
-
-    // Update parent tenant count
-    const parentTenant = mockStore.data.tenants.find((t) => t.id === data.tenantId);
-    if (parentTenant) {
-      parentTenant.organizationsCount += 1;
-    }
-
     return newOrg;
   },
 
   async update(id: string, data: Partial<OrganizationFormData>): Promise<Organization> {
-    await new Promise((res) => setTimeout(res, 200));
     const index = mockStore.data.organizations.findIndex((o) => o.id === id);
-    if (index === -1) throw new Error('Organization not found');
-
-    const updated: Organization = {
-      ...mockStore.data.organizations[index],
-      ...data,
-      companyCode: data.companyCode ? data.companyCode.toUpperCase() : mockStore.data.organizations[index].companyCode,
-      numberOfBranches: data.numberOfBranches !== undefined ? Number(data.numberOfBranches) : mockStore.data.organizations[index].numberOfBranches,
-      numberOfWarehouses: data.numberOfWarehouses !== undefined ? Number(data.numberOfWarehouses) : mockStore.data.organizations[index].numberOfWarehouses,
-    };
-    mockStore.data.organizations[index] = updated;
-    return updated;
-  },
-
-  async delete(id: string): Promise<void> {
-    await new Promise((res) => setTimeout(res, 200));
-    const org = mockStore.data.organizations.find((o) => o.id === id);
-    if (org) {
-      const parentTenant = mockStore.data.tenants.find((t) => t.id === org.tenantId);
-      if (parentTenant && parentTenant.organizationsCount > 0) {
-        parentTenant.organizationsCount -= 1;
-      }
+    if (index !== -1) {
+      const updated: Organization = {
+        ...mockStore.data.organizations[index],
+        ...data,
+      };
+      mockStore.data.organizations[index] = updated;
+      return updated;
     }
-    mockStore.data.organizations = mockStore.data.organizations.filter((o) => o.id !== id);
+    throw new Error('Organization not found');
   },
 
   async toggleStatus(id: string): Promise<Organization> {
-    await new Promise((res) => setTimeout(res, 150));
-    const org = mockStore.data.organizations.find((o) => o.id === id);
-    if (!org) throw new Error('Organization not found');
-    org.status = org.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-    return { ...org };
+    const index = mockStore.data.organizations.findIndex((o) => o.id === id);
+    if (index !== -1) {
+      const current = mockStore.data.organizations[index];
+      const updated: Organization = {
+        ...current,
+        status: current.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+      };
+      mockStore.data.organizations[index] = updated;
+      return updated;
+    }
+    throw new Error('Organization not found');
+  },
+
+  async delete(id: string): Promise<void> {
+    mockStore.data.organizations = mockStore.data.organizations.filter((o) => o.id !== id);
   },
 };

@@ -6,7 +6,7 @@ export const requestService = {
   async getAll(): Promise<CalibrationRequest[]> {
     try {
       const res = await apiClient.get('/api/requests');
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         return res.data.map((r: any) => ({
           id: r.id,
           requestNumber: r.request_number || r.requestNumber || `REQ-${r.id.substring(0, 6)}`,

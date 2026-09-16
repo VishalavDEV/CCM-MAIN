@@ -7,7 +7,7 @@ export const quotationService = {
   async getAll(): Promise<Quotation[]> {
     try {
       const res = await apiClient.get('/api/commercial/quotations');
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         return res.data.map((q: any) => ({
           id: q.id,
           quotationNumber: q.quotation_number || q.quotationNumber || `QT-${q.id.substring(0, 6)}`,
@@ -230,7 +230,7 @@ export const approvalService = {
   async getAll(): Promise<ApprovalRecord[]> {
     try {
       const res = await apiClient.get('/api/commercial/approvals');
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         return res.data.map((a: any) => ({
           id: a.id,
           quotationId: a.quotation_id || a.quotationId,
@@ -307,7 +307,7 @@ export const purchaseOrderService = {
   async getAll(): Promise<PurchaseOrder[]> {
     try {
       const res = await apiClient.get('/api/commercial/purchase-orders');
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         return res.data.map((po: any) => ({
           id: po.id,
           poNumber: po.po_number || po.poNumber || `PO-${po.id.substring(0, 6)}`,
@@ -372,7 +372,7 @@ export const invoiceService = {
   async getAll(): Promise<Invoice[]> {
     try {
       const res = await apiClient.get('/api/commercial/invoices');
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data)) {
         return res.data.map((inv: any) => ({
           id: inv.id,
           invoiceNumber: inv.invoice_number || inv.invoiceNumber || `INV-${inv.id.substring(0, 6)}`,
