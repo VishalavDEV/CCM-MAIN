@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, AlertTriangle, CheckCircle, FileText, PenTool, Search } from 'lucide-react';
+import { X, AlertTriangle, CheckCircle, FileText, PenTool, Search, ArrowLeft } from 'lucide-react';
 import { ApprovalActionType } from '../../types/invoice';
 
 // Generic Modal Container
@@ -7,10 +7,71 @@ export const Modal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   title?: string;
+  subtitle?: string;
   children: React.ReactNode;
   maxWidth?: string;
-}> = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }) => {
+  fullPage?: boolean;
+}> = ({ isOpen, onClose, title, subtitle, children, maxWidth = 'max-w-md', fullPage = true }) => {
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') onClose();
+      };
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = 'unset';
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
+
+  if (fullPage) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-50 flex flex-col overflow-y-auto animate-fade-in">
+        {/* Full Page Sticky Header */}
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-6 py-4 flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 transition shadow-2xs cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+            <div className="h-5 w-px bg-slate-200" />
+            <div>
+              <h2 className="text-base font-bold text-slate-900 tracking-tight">{title || 'Form Details'}</h2>
+              {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline-block text-[11px] font-mono text-slate-400 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+              ESC to exit
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              title="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        {/* Full Page Body Content */}
+        <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 sm:p-8">
+            {children}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
@@ -54,7 +115,7 @@ export const DeleteModal: React.FC<{
   loading = false,
 }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} maxWidth="max-w-sm">
+    <Modal isOpen={isOpen} onClose={onClose} maxWidth="max-w-sm" fullPage={false}>
       <div className="flex flex-col items-center text-center">
         <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-3">
           <AlertTriangle className="w-6 h-6" />

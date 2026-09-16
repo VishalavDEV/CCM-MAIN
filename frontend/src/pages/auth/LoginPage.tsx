@@ -7,8 +7,8 @@ import { Modal } from '../../components/modals/AppModals';
 import { mockStore } from '../../mock/initialStore';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('bvnethra2005@gmail.com');
-  const [password, setPassword] = useState('••••••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -39,12 +39,6 @@ export const LoginPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickFill = (userEmail: string) => {
-    setEmail(userEmail);
-    setPassword('Password@123');
-    setErrorMessage('');
   };
 
   const handleForgotPassword = (e: React.FormEvent) => {
@@ -163,57 +157,6 @@ export const LoginPage: React.FC = () => {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Credentials Accordion */}
-          <div className="mt-6 pt-4 border-t border-slate-100">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-              Quick Test Credentials
-            </span>
-            <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-              <button
-                type="button"
-                onClick={() => handleQuickFill('bvnethra2005@gmail.com')}
-                className="p-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 text-left font-medium transition truncate"
-              >
-                🔑 Nethra BV (Admin)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('admin@apexmetrology.com')}
-                className="p-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 text-left font-medium transition truncate"
-              >
-                👑 Super Admin
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('priya.s@apexmetrology.com')}
-                className="p-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 text-left font-medium transition truncate"
-              >
-                🔬 Lab Tech (Priya)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('rajesh.k@apexmetrology.com')}
-                className="p-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 text-left font-medium transition truncate"
-              >
-                📦 Collection Agent
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('amit.v@apexmetrology.com')}
-                className="p-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 text-left font-medium transition truncate"
-              >
-                📊 Commercial User
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickFill('vikram.m@apexmetrology.com')}
-                className="p-1.5 rounded-lg bg-slate-50 hover:bg-indigo-50 border border-slate-200 text-slate-700 text-left font-medium transition truncate"
-              >
-                ✅ Approver (Dr. Vikram)
-              </button>
-            </div>
-          </div>
         </div>
 
         <div className="text-center mt-6 text-xs text-slate-400">
@@ -227,6 +170,7 @@ export const LoginPage: React.FC = () => {
         onClose={() => setForgotModalOpen(false)}
         title="Reset Password"
         maxWidth="max-w-sm"
+        fullPage={false}
       >
         {forgotSubmitted ? (
           <div className="text-center py-4">
