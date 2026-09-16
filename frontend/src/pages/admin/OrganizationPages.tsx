@@ -179,17 +179,25 @@ export const OrganizationListPage: React.FC = () => {
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Organization Management</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Lowest business operational scope. Note: Sub-organizations are strictly not part of the system hierarchy.
+            Organizations are automatically provisioned and managed under each onboarded Enterprise Tenant.
           </p>
         </div>
         <button
           type="button"
-          onClick={() => navigate('/organizations/new')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-xs transition"
+          onClick={() => navigate('/admin/tenants/new')}
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
-          Onboard Organization (5-Step Wizard)
+          <Building2 className="w-4 h-4" />
+          Onboard New Tenant
         </button>
+      </div>
+
+      <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-2xl p-4 flex items-start gap-3">
+        <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+        <div className="text-xs text-emerald-950">
+          <span className="font-semibold block text-emerald-900 mb-0.5">Automatic Organization Provisioning</span>
+          When you onboard a Tenant, an Organization is automatically created and populated with matching credentials and facility data. No separate onboarding form is required.
+        </div>
       </div>
 
       <DataTable

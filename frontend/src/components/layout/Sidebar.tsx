@@ -67,12 +67,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
           icon: <Building2 className="w-4 h-4" />,
           permission: PERMISSION_CODES.TENANT_VIEW,
         },
+        /* HIDDEN FOR NOW: Organization Management
         {
           title: 'Organizations',
           path: '/admin/organizations',
           icon: <Building className="w-4 h-4" />,
           permission: PERMISSION_CODES.ORGANIZATION_VIEW,
         },
+        */
         {
           title: 'User Management',
           path: '/admin/users',

@@ -43,6 +43,41 @@ export const organizationService = {
     } catch (err) {
       console.warn('organizationService.getAll API warning:', err);
     }
+
+    // Ensure every existing Tenant has an automatically provisioned Organization
+    mockStore.data.tenants.forEach((t) => {
+      const exists = mockStore.data.organizations.some((o) => o.tenantId === t.id);
+      if (!exists) {
+        mockStore.data.organizations.unshift({
+          id: `org-auto-${t.id}`,
+          tenantId: t.id,
+          companyName: `${t.name} Organization`,
+          companyCode: `${t.code}-ORG`,
+          companyType: 'Private Limited',
+          businessType: 'Calibration',
+          registrationNumber: t.registrationNumber || '',
+          gstNumber: t.gstNumber || '',
+          companyEmail: t.contactEmail || '',
+          companyPhone: t.contactPhone || '',
+          addressLine1: t.addressLine1 || '',
+          addressLine2: t.addressLine2 || '',
+          city: t.city || 'Bangalore',
+          state: t.state || 'Karnataka',
+          country: t.country || 'India',
+          pincode: t.pincode || '',
+          timezone: t.timezone || 'Asia/Kolkata (IST)',
+          currency: t.currency || 'INR (₹)',
+          numberOfBranches: t.numberOfBranches || 1,
+          numberOfWarehouses: 1,
+          adminName: t.adminName || '',
+          adminEmail: t.adminEmail || '',
+          status: t.status === 'SUSPENDED' ? 'INACTIVE' : (t.status as any) || 'ACTIVE',
+          createdDate: t.createdDate || new Date().toISOString().split('T')[0],
+          usersCount: t.usersCount || 1,
+        });
+      }
+    });
+
     if (tenantId) {
       return mockStore.data.organizations.filter((o) => o.tenantId === tenantId);
     }

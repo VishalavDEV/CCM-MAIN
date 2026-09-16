@@ -127,7 +127,7 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* Organizations */}
+        {/* HIDDEN FOR NOW: Organizations
         <Route
           path="admin/organizations"
           element={
@@ -176,6 +176,7 @@ export const AppRoutes: React.FC = () => {
             </PermissionRoute>
           }
         />
+        */}
 
         {/* Users */}
         <Route

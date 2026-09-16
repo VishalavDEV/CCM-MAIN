@@ -48,8 +48,9 @@ export const tenantService = {
   },
 
   async create(data: TenantFormData): Promise<Tenant> {
+    const newTenantId = `ten-${Date.now()}`;
     const newTenant: Tenant = {
-      id: `ten-${Date.now()}`,
+      id: newTenantId,
       name: data.name,
       code: data.code.toUpperCase(),
       tenantType: data.tenantType || 'Enterprise',
@@ -69,13 +70,44 @@ export const tenantService = {
       adminName: data.adminName || '',
       adminEmail: data.adminEmail || '',
       status: 'ACTIVE',
-      organizationsCount: 0,
+      organizationsCount: 1,
       usersCount: 1,
       createdDate: new Date().toISOString().split('T')[0],
       updatedDate: new Date().toISOString().split('T')[0],
       description: data.description || '',
     };
     mockStore.data.tenants.unshift(newTenant);
+
+    // Automatically create corresponding Organization for this Tenant
+    const autoOrg = {
+      id: `org-${Date.now()}`,
+      tenantId: newTenantId,
+      companyName: `${data.name} Organization`,
+      companyCode: `${data.code.toUpperCase()}-ORG`,
+      companyType: (data.tenantType as any) || 'Private Limited',
+      businessType: 'Calibration' as const,
+      registrationNumber: data.registrationNumber || '',
+      gstNumber: data.gstNumber ? data.gstNumber.toUpperCase() : '',
+      companyEmail: data.contactEmail,
+      companyPhone: data.contactPhone,
+      addressLine1: data.addressLine1 || '',
+      addressLine2: data.addressLine2 || '',
+      city: data.city || 'Bangalore',
+      state: data.state || 'Karnataka',
+      country: data.country || 'India',
+      pincode: data.pincode || '',
+      timezone: data.timezone || 'Asia/Kolkata (IST)',
+      currency: data.currency || 'INR (₹)',
+      numberOfBranches: Number(data.numberOfBranches) || 1,
+      numberOfWarehouses: 1,
+      adminName: data.adminName || '',
+      adminEmail: data.adminEmail || '',
+      status: 'ACTIVE' as const,
+      createdDate: new Date().toISOString().split('T')[0],
+      usersCount: 1,
+    };
+    mockStore.data.organizations.unshift(autoOrg);
+
     return newTenant;
   },
 
@@ -88,6 +120,23 @@ export const tenantService = {
         updatedDate: new Date().toISOString().split('T')[0],
       };
       mockStore.data.tenants[index] = updated;
+
+      // Automatically sync corresponding Organization
+      const orgIdx = mockStore.data.organizations.findIndex((o) => o.tenantId === id);
+      if (orgIdx !== -1) {
+        mockStore.data.organizations[orgIdx] = {
+          ...mockStore.data.organizations[orgIdx],
+          companyName: data.name ? `${data.name} Organization` : mockStore.data.organizations[orgIdx].companyName,
+          companyEmail: data.contactEmail || mockStore.data.organizations[orgIdx].companyEmail,
+          companyPhone: data.contactPhone || mockStore.data.organizations[orgIdx].companyPhone,
+          addressLine1: data.addressLine1 || mockStore.data.organizations[orgIdx].addressLine1,
+          city: data.city || mockStore.data.organizations[orgIdx].city,
+          state: data.state || mockStore.data.organizations[orgIdx].state,
+          pincode: data.pincode || mockStore.data.organizations[orgIdx].pincode,
+          status: (data.status as any) || mockStore.data.organizations[orgIdx].status,
+        };
+      }
+
       return updated;
     }
     throw new Error('Tenant not found');
@@ -95,5 +144,6 @@ export const tenantService = {
 
   async delete(id: string): Promise<void> {
     mockStore.data.tenants = mockStore.data.tenants.filter((t) => t.id !== id);
+    mockStore.data.organizations = mockStore.data.organizations.filter((o) => o.tenantId !== id);
   },
 };

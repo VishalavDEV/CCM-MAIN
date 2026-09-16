@@ -159,11 +159,13 @@ export const WorkQueueWidget: React.FC = () => {
           route: '/admin/tenants',
           urgency: 'Governance',
         },
+        /* HIDDEN FOR NOW: Organization Management
         {
           title: 'Registered Organizations / Labs',
           count: mockStore.data.organizations.length,
           route: '/admin/organizations',
         },
+        */
         {
           title: 'Provisioned System Users',
           count: mockStore.data.users.length,

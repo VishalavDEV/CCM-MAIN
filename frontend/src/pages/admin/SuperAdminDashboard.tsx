@@ -54,6 +54,7 @@ export const SuperAdminDashboard: React.FC = () => {
       onClick: () => navigate('/admin/tenants'),
       permission: PERMISSION_CODES.TENANT_VIEW,
     },
+    /* HIDDEN FOR NOW: Organization Management
     {
       id: 'organizations',
       title: 'Total Organizations',
@@ -64,6 +65,7 @@ export const SuperAdminDashboard: React.FC = () => {
       onClick: () => navigate('/admin/organizations'),
       permission: PERMISSION_CODES.ORGANIZATION_VIEW,
     },
+    */
     {
       id: 'users',
       title: 'Active Users',
@@ -200,6 +202,7 @@ export const SuperAdminDashboard: React.FC = () => {
               <ArrowRight className="w-4 h-4" />
             </button>
           )}
+          {/* HIDDEN FOR NOW: Onboard Company Button
           {hasPermission(PERMISSION_CODES.ORGANIZATION_CREATE) && (
             <button
               type="button"
@@ -209,6 +212,7 @@ export const SuperAdminDashboard: React.FC = () => {
               Onboard Company
             </button>
           )}
+          */}
         </div>
       </div>
 
@@ -323,7 +327,7 @@ export const SuperAdminDashboard: React.FC = () => {
         <div className="space-y-6">
           <WorkQueueWidget />
 
-          {/* Direct Organization Onboarding Banner - Only for Admins */}
+          {/* HIDDEN FOR NOW: Direct Organization Onboarding Banner
           {hasPermission(PERMISSION_CODES.ORGANIZATION_CREATE) && (
             <div className="bg-emerald-950 text-emerald-100 rounded-2xl p-5 border border-emerald-900/60 shadow-subtle">
               <div className="flex items-center gap-2 mb-2">
@@ -342,6 +346,7 @@ export const SuperAdminDashboard: React.FC = () => {
               </button>
             </div>
           )}
+          */}
         </div>
       </div>
     </div>
