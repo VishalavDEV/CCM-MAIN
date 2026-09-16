@@ -5,7 +5,7 @@ export interface Vendor {
   tenantId: string;
   organizationId: string;
 
-  // Vendor Information
+  // 1. Vendor Info
   vendorName: string;
   vendorCode: string;
   businessType: string;
@@ -13,27 +13,28 @@ export interface Vendor {
   gstNumber?: string;
   panNumber?: string;
 
-  // Contact Address
+  // 2. Address Details
   email: string;
   phoneNumber: string;
+  phone?: string; // alias for compatibility
   address: string;
   city: string;
   state: string;
   country: string;
   pincode: string;
 
-  // Commercial Information
-  creditScore: number;
-  creditLevel: CreditLevel;
-  paymentDetails: string;
-  termsAndConditions: string;
-
+  // System & Commercial Metadata
+  creditScore?: number;
+  creditLevel?: CreditLevel;
+  paymentDetails?: string;
+  termsAndConditions?: string;
   status: 'ACTIVE' | 'INACTIVE';
   activePOCount?: number;
   createdAt: string;
 }
 
 export interface VendorFormData {
+  // 1. Vendor Info
   vendorName: string;
   vendorCode: string;
   businessType: string;
@@ -41,16 +42,20 @@ export interface VendorFormData {
   gstNumber?: string;
   panNumber?: string;
 
+  // 2. Address Details
   email: string;
   phoneNumber: string;
+  phone?: string;
   address: string;
   city: string;
   state: string;
   country: string;
   pincode: string;
 
-  creditScore: number;
-  creditLevel: CreditLevel;
-  paymentDetails: string;
-  termsAndConditions: string;
+  // Optional extended attributes
+  creditScore?: number;
+  creditLevel?: CreditLevel;
+  paymentDetails?: string;
+  termsAndConditions?: string;
+  status?: 'ACTIVE' | 'INACTIVE';
 }
