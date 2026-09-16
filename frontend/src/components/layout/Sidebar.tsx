@@ -91,6 +91,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
           icon: <KeyRound className="w-4 h-4" />,
           permission: PERMISSION_CODES.PERMISSION_VIEW,
         },
+        {
+          title: 'Audit Logs',
+          path: '/admin/audit-logs',
+          icon: <History className="w-4 h-4" />,
+          permission: PERMISSION_CODES.AUDIT_VIEW,
+        },
       ],
     },
     {
@@ -181,7 +187,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
       ],
     },
     {
-      title: 'EXECUTION & AUDIT',
+      title: 'EXECUTION',
       items: [
         {
           title: 'Signatures',
@@ -200,12 +206,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
           path: '/deliveries',
           icon: <Truck className="w-4 h-4" />,
           permission: PERMISSION_CODES.DELIVERY_VIEW,
-        },
-        {
-          title: 'Audit Logs',
-          path: '/admin/audit-logs',
-          icon: <History className="w-4 h-4" />,
-          permission: PERMISSION_CODES.AUDIT_VIEW,
         },
       ],
     },
