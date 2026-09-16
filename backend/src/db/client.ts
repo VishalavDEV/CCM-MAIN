@@ -1,15 +1,20 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import path from 'path';
 
-dotenv.config();
+// Load .env variables from root or backend directory
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:Ccm-main123%23%40@127.0.0.1:5432/postgres';
+const dbUrl = process.env.DATABASE_URL || process.env.SUPABASE_DB_URI || 'postgresql://postgres.owucaqkvoxtupxibracw:Ccm-main123%23%40@aws-0-ap-south-1.pooler.supabase.com:6543/postgres';
+const isLocal = dbUrl.includes('127.0.0.1') || dbUrl.includes('localhost');
 
 const pool = new pg.Pool({
-    connectionString,
+    connectionString: dbUrl,
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 10000,
+    ...(isLocal ? {} : { ssl: { rejectUnauthorized: false } }),
 });
 
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
