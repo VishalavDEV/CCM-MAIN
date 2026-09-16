@@ -2,12 +2,20 @@ import { CalibrationRequest, CreateRequestFormData, RequestStatus, RequestItem }
 import { mockStore } from '../mock/initialStore';
 import { apiClient } from '../lib/api/apiClient';
 
+function parseList(res: any): any[] | null {
+  if (!res || !res.success) return null;
+  if (Array.isArray(res.data)) return res.data;
+  if (res.data && Array.isArray(res.data.data)) return res.data.data;
+  return [];
+}
+
 export const requestService = {
   async getAll(): Promise<CalibrationRequest[]> {
     try {
       const res = await apiClient.get('/api/requests');
-      if (res && res.success && Array.isArray(res.data)) {
-        return res.data.map((r: any) => ({
+      const list = parseList(res);
+      if (list !== null) {
+        return list.map((r: any) => ({
           id: r.id,
           requestNumber: r.request_number || r.requestNumber || `REQ-${r.id.substring(0, 6)}`,
           tenantId: r.tenant_id || r.tenantId || '00000000-0000-0000-0000-000000000001',

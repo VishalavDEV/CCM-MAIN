@@ -3,12 +3,20 @@ import { ApprovalRecord, ApprovalActionType, PurchaseOrder, Invoice, InvoiceType
 import { mockStore } from '../mock/initialStore';
 import { apiClient } from '../lib/api/apiClient';
 
+function parseList(res: any): any[] | null {
+  if (!res || !res.success) return null;
+  if (Array.isArray(res.data)) return res.data;
+  if (res.data && Array.isArray(res.data.data)) return res.data.data;
+  return [];
+}
+
 export const quotationService = {
   async getAll(): Promise<Quotation[]> {
     try {
       const res = await apiClient.get('/api/commercial/quotations');
-      if (res && res.success && Array.isArray(res.data)) {
-        return res.data.map((q: any) => ({
+      const list = parseList(res);
+      if (list !== null) {
+        return list.map((q: any) => ({
           id: q.id,
           quotationNumber: q.quotation_number || q.quotationNumber || `QT-${q.id.substring(0, 6)}`,
           requestId: q.request_id || q.requestId,
@@ -230,8 +238,9 @@ export const approvalService = {
   async getAll(): Promise<ApprovalRecord[]> {
     try {
       const res = await apiClient.get('/api/commercial/approvals');
-      if (res && res.success && Array.isArray(res.data)) {
-        return res.data.map((a: any) => ({
+      const list = parseList(res);
+      if (list !== null) {
+        return list.map((a: any) => ({
           id: a.id,
           quotationId: a.quotation_id || a.quotationId,
           quotationNumber: a.quotation_number || a.quotationNumber || `QT-${a.id.substring(0, 6)}`,
@@ -307,8 +316,9 @@ export const purchaseOrderService = {
   async getAll(): Promise<PurchaseOrder[]> {
     try {
       const res = await apiClient.get('/api/commercial/purchase-orders');
-      if (res && res.success && Array.isArray(res.data)) {
-        return res.data.map((po: any) => ({
+      const list = parseList(res);
+      if (list !== null) {
+        return list.map((po: any) => ({
           id: po.id,
           poNumber: po.po_number || po.poNumber || `PO-${po.id.substring(0, 6)}`,
           vendorId: po.vendor_id || po.vendorId || 'ven-1',
@@ -372,8 +382,9 @@ export const invoiceService = {
   async getAll(): Promise<Invoice[]> {
     try {
       const res = await apiClient.get('/api/commercial/invoices');
-      if (res && res.success && Array.isArray(res.data)) {
-        return res.data.map((inv: any) => ({
+      const list = parseList(res);
+      if (list !== null) {
+        return list.map((inv: any) => ({
           id: inv.id,
           invoiceNumber: inv.invoice_number || inv.invoiceNumber || `INV-${inv.id.substring(0, 6)}`,
           invoiceType: inv.invoice_type || inv.invoiceType || 'FULL_REQUEST',

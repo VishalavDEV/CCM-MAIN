@@ -4,12 +4,20 @@ import { Item, ItemFormData, ItemStatus } from '../types/item';
 import { mockStore } from '../mock/initialStore';
 import { apiClient } from '../lib/api/apiClient';
 
+function parseList(res: any): any[] | null {
+  if (!res || !res.success) return null;
+  if (Array.isArray(res.data)) return res.data;
+  if (res.data && Array.isArray(res.data.data)) return res.data.data;
+  return [];
+}
+
 export const clientService = {
   async getAll(): Promise<Client[]> {
     try {
       const res = await apiClient.get('/api/master/clients');
-      if (res && res.success && Array.isArray(res.data)) {
-        return res.data.map((c: any) => ({
+      const list = parseList(res);
+      if (list !== null) {
+        return list.map((c: any) => ({
           id: c.id,
           tenantId: c.tenant_id || c.tenantId || '00000000-0000-0000-0000-000000000001',
           organizationId: c.organization_id || c.organizationId || '00000000-0000-0000-0000-000000000001',
@@ -209,8 +217,9 @@ export const vendorService = {
   async getAll(): Promise<Vendor[]> {
     try {
       const res = await apiClient.get('/api/master/vendors');
-      if (res && res.success && Array.isArray(res.data)) {
-        return res.data.map((v: any) => ({
+      const list = parseList(res);
+      if (list !== null) {
+        return list.map((v: any) => ({
           id: v.id,
           tenantId: v.tenant_id || v.tenantId || '00000000-0000-0000-0000-000000000001',
           organizationId: v.organization_id || v.organizationId || '00000000-0000-0000-0000-000000000001',
@@ -400,8 +409,9 @@ export const itemService = {
   async getAll(): Promise<Item[]> {
     try {
       const res = await apiClient.get('/api/master/items');
-      if (res && res.success && Array.isArray(res.data)) {
-        return res.data.map((i: any) => ({
+      const list = parseList(res);
+      if (list !== null) {
+        return list.map((i: any) => ({
           id: i.id,
           tenantId: i.tenant_id || i.tenantId || '00000000-0000-0000-0000-000000000001',
           organizationId: i.organization_id || i.organizationId || '00000000-0000-0000-0000-000000000001',
