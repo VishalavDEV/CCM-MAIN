@@ -736,6 +736,8 @@ CREATE TABLE IF NOT EXISTS quotation_items (
     request_id UUID NOT NULL REFERENCES calibration_requests(id) ON DELETE CASCADE,
     request_item_id UUID REFERENCES request_items(id) ON DELETE SET NULL,
     item_master_id UUID REFERENCES item_masters(id) ON DELETE SET NULL,
+    client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+    client_name VARCHAR(255),
     item_type VARCHAR(30) NOT NULL DEFAULT 'CALIBRATION' CHECK (item_type IN ('CALIBRATION', 'SERVICE', 'OUTSOURCING', 'OTHER')),
     description TEXT NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1 CHECK (quantity > 0),

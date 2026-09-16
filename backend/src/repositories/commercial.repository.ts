@@ -81,10 +81,11 @@ export class CommercialRepository {
 
                 await client.query(
                     `INSERT INTO quotation_items (
-                        tenant_id, organization_id, quotation_id, request_id, request_item_id, item_master_id, description, quantity, unit_price, tax_rate, tax_amount, line_total, remarks
-                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+                        tenant_id, organization_id, quotation_id, request_id, request_item_id, item_master_id, client_id, client_name, description, quantity, unit_price, tax_rate, tax_amount, line_total, remarks
+                     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
                     [
                         tenantId, orgId, newQ.id, data.requestId, item.requestItemId || null, item.itemMasterId || null,
+                        data.clientId || newQ.client_id || null, item.clientName || null,
                         item.description, item.quantity, item.unitPrice,
                         item.taxRatePercentage || 18.0, lineTax, lineTotal, item.remarks || null
                     ]

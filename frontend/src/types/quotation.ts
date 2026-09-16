@@ -1,5 +1,7 @@
 export interface QuotationItem {
   id: string;
+  clientId?: string;
+  clientName?: string;
   itemId: string;
   itemName: string;
   itemCode: string;
