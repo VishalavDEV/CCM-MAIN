@@ -86,6 +86,12 @@ export const userService = {
 export const roleService = {
   async getAll(): Promise<Role[]> {
     await new Promise((res) => setTimeout(res, 150));
+    const users = mockStore.data.users || [];
+    mockStore.data.roles.forEach((r) => {
+      r.userCount = users.filter(
+        (u) => u.roleId === r.id || u.roleName?.toLowerCase() === r.name?.toLowerCase()
+      ).length;
+    });
     return [...mockStore.data.roles];
   },
 

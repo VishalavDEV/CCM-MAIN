@@ -47,6 +47,7 @@ export interface Organization {
   // Section D: Administrator Summary
   adminName: string;
   adminEmail: string;
+  adminDesignation?: string;
 
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   createdDate: string;
@@ -83,6 +84,7 @@ export interface OrganizationFormData {
   // Step 4: Administrator
   adminName: string;
   adminEmail: string;
+  adminDesignation?: string;
   password?: string;
   confirmPassword?: string;
 }

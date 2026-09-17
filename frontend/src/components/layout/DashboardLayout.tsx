@@ -9,7 +9,7 @@ export const DashboardLayout: React.FC = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 overflow-hidden">
+    <div className="flex h-screen w-full bg-gradient-to-br from-slate-50 via-slate-50/90 to-slate-100/70 overflow-hidden text-slate-800 antialiased">
       {/* Desktop Sidebar */}
       <div className="hidden lg:flex shrink-0">
         <Sidebar

@@ -37,6 +37,7 @@ export interface Tenant {
   // 4. Administration
   adminName?: string;
   adminEmail?: string;
+  adminDesignation?: string;
 
   // System & Lifecycle Metadata
   status: StatusType;
@@ -73,8 +74,10 @@ export interface TenantFormData {
   // 4. Administration
   adminName: string;
   adminEmail: string;
+  adminDesignation?: string;
   adminPassword?: string;
 
   status: StatusType;
   description?: string;
+  organizations?: any[];
 }

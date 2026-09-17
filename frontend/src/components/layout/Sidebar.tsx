@@ -51,7 +51,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
   const { user } = useAuth();
   const { hasPermission } = usePermission();
 
-  const menuSections: { title: string; items: MenuItem[] }[] = [
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN' || user?.roleName === 'Super Admin';
+
+  const superAdminSections: { title: string; items: MenuItem[] }[] = [
     {
       title: 'CORE',
       items: [
@@ -67,14 +69,50 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
           icon: <Building2 className="w-4 h-4" />,
           permission: PERMISSION_CODES.TENANT_VIEW,
         },
-        /* HIDDEN FOR NOW: Organization Management
         {
-          title: 'Organizations',
-          path: '/admin/organizations',
-          icon: <Building className="w-4 h-4" />,
-          permission: PERMISSION_CODES.ORGANIZATION_VIEW,
+          title: 'User Management',
+          path: '/admin/users',
+          icon: <Users className="w-4 h-4" />,
+          permission: PERMISSION_CODES.USER_VIEW,
         },
-        */
+        {
+          title: 'Role Management',
+          path: '/admin/roles',
+          icon: <ShieldAlert className="w-4 h-4" />,
+          permission: PERMISSION_CODES.ROLE_VIEW,
+        },
+        {
+          title: 'Permissions',
+          path: '/admin/permissions',
+          icon: <KeyRound className="w-4 h-4" />,
+          permission: PERMISSION_CODES.PERMISSION_VIEW,
+        },
+        {
+          title: 'Audit Logs',
+          path: '/admin/audit-logs',
+          icon: <History className="w-4 h-4" />,
+          permission: PERMISSION_CODES.AUDIT_VIEW,
+        },
+      ],
+    },
+  ];
+
+  const standardMenuSections: { title: string; items: MenuItem[] }[] = [
+    {
+      title: 'CORE',
+      items: [
+        { title: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+      ],
+    },
+    {
+      title: 'ADMINISTRATION',
+      items: [
+        {
+          title: 'Tenant Management',
+          path: '/admin/tenants',
+          icon: <Building2 className="w-4 h-4" />,
+          permission: PERMISSION_CODES.TENANT_VIEW,
+        },
         {
           title: 'User Management',
           path: '/admin/users',
@@ -213,30 +251,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
     },
   ];
 
+  const menuSections = isSuperAdmin ? superAdminSections : standardMenuSections;
+
   return (
     <aside
-      className={`h-screen bg-slate-900 text-slate-300 flex flex-col border-r border-slate-800 transition-all duration-300 select-none z-30 shrink-0 ${
+      className={`h-screen bg-[#0B1120] text-slate-300 flex flex-col border-r border-slate-800/90 transition-all duration-300 select-none z-30 shrink-0 ${
         collapsed ? 'w-18' : 'w-64'
       }`}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80">
+      <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800/80 bg-[#0B1120]/50 backdrop-blur-sm">
         {!collapsed ? (
-          <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-base shadow-sm shrink-0">
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-sm shadow-sky-500/20 shrink-0">
               C
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-bold text-white tracking-tight leading-none">
+              <span className="text-sm font-extrabold text-white tracking-tight leading-none">
                 CCM PLATFORM
               </span>
-              <span className="text-[10px] text-slate-400 font-mono tracking-widest mt-1 uppercase">
+              <span className="text-[10px] text-slate-400 font-mono tracking-wider mt-1 uppercase">
                 Enterprise Metrology
               </span>
             </div>
           </div>
         ) : (
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-base mx-auto shadow-sm">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white font-black text-sm mx-auto shadow-sm shadow-sky-500/20">
             C
           </div>
         )}
@@ -244,7 +284,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
         <button
           type="button"
           onClick={onToggleCollapse}
-          className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition hidden lg:flex"
+          className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/70 transition hidden lg:flex cursor-pointer"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
@@ -276,9 +316,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                         isActive
-                          ? 'bg-indigo-600 text-white shadow-xs font-semibold'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                      } ${collapsed ? 'justify-center px-0' : ''}`
+                          ? 'bg-gradient-to-r from-sky-500/15 via-sky-500/10 to-transparent text-sky-400 font-semibold border-l-2 border-sky-400 pl-2.5 shadow-2xs'
+                          : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/50'
+                      } ${collapsed ? 'justify-center px-0 border-l-0' : ''}`
                     }
                     title={collapsed ? item.title : undefined}
                   >
@@ -292,16 +332,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
         })}
       </div>
 
-      {/* Footer / Current Tenant & Org Summary */}
+      {/* Footer / User Profile */}
       {!collapsed && user && (
-        <div className="p-3 border-t border-slate-800/80 bg-slate-950/40 text-[11px]">
-          <div className="flex items-center gap-2 text-slate-400 mb-1 truncate">
-            <Building2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-            <span className="truncate">{user.tenantName || 'Apex Metrology'}</span>
-          </div>
-          <div className="flex items-center gap-2 text-slate-500 truncate">
-            <Building className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="truncate">{user.organizationName || 'Bangalore Lab'}</span>
+        <div className="p-3 border-t border-slate-800/80 bg-slate-950/60 text-[11px] flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="relative">
+              <div className="w-8 h-8 rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/30 font-bold flex items-center justify-center text-xs shrink-0">
+                {user.fullName ? user.fullName.slice(0, 2).toUpperCase() : 'SA'}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-[#0B1120]" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-slate-200 font-semibold text-xs truncate">{user.fullName || 'Administrator'}</div>
+              <div className="text-slate-500 text-[10px] truncate">{user.roleName || 'Super Admin'}</div>
+            </div>
           </div>
         </div>
       )}

@@ -115,10 +115,10 @@ export function DataTable<T extends Record<string, any>>({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 shadow-subtle overflow-hidden flex flex-col">
+    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-elevation overflow-hidden flex flex-col transition-all">
       {/* Top Toolbar */}
       {(searchable || filters || actions) && (
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white">
+        <div className="p-4 border-b border-slate-100/90 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white">
           <div className="flex items-center gap-3 flex-1 flex-wrap">
             {searchable && (
               <div className="relative flex-1 min-w-[220px] max-w-sm">
@@ -131,7 +131,7 @@ export function DataTable<T extends Record<string, any>>({
                     setCurrentPage(1);
                   }}
                   placeholder={searchPlaceholder}
-                  className="w-full pl-9.5 pr-4 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 text-slate-700"
+                  className="w-full pl-9.5 pr-4 py-2 text-sm bg-slate-50/70 border border-slate-200/90 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 transition-all placeholder:text-slate-400 text-slate-700 shadow-2xs"
                 />
               </div>
             )}
@@ -145,7 +145,7 @@ export function DataTable<T extends Record<string, any>>({
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50/80 border-b border-slate-200/80 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
+            <tr className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-semibold tracking-wider text-slate-500 uppercase">
               {columns.map((col) => {
                 const isSorted = sortKey === col.key;
                 const alignClass =
@@ -161,7 +161,7 @@ export function DataTable<T extends Record<string, any>>({
                     style={{ width: col.width }}
                     onClick={() => col.sortable && handleSort(col.key)}
                     className={`px-5 py-3.5 select-none ${alignClass} ${
-                      col.sortable ? 'cursor-pointer hover:text-slate-800' : ''
+                      col.sortable ? 'cursor-pointer hover:text-slate-800 transition-colors' : ''
                     }`}
                   >
                     <div className={`inline-flex items-center gap-1.5 ${col.align === 'right' ? 'justify-end w-full' : ''}`}>
@@ -170,12 +170,12 @@ export function DataTable<T extends Record<string, any>>({
                         <span className="text-slate-400">
                           {isSorted ? (
                             sortDirection === 'asc' ? (
-                              <ChevronUp className="w-3.5 h-3.5 text-indigo-600" />
+                              <ChevronUp className="w-3.5 h-3.5 text-sky-600" />
                             ) : (
-                              <ChevronDown className="w-3.5 h-3.5 text-indigo-600" />
+                              <ChevronDown className="w-3.5 h-3.5 text-sky-600" />
                             )
                           ) : (
-                            <ChevronsUpDown className="w-3.5 h-3.5 opacity-50" />
+                            <ChevronsUpDown className="w-3.5 h-3.5 opacity-40" />
                           )}
                         </span>
                       )}
@@ -203,7 +203,7 @@ export function DataTable<T extends Record<string, any>>({
                 <tr
                   key={rowKey(row)}
                   onClick={() => onRowClick && onRowClick(row)}
-                  className={`group transition-colors hover:bg-slate-50/80 ${
+                  className={`group transition-colors duration-150 hover:bg-sky-50/40 ${
                     onRowClick ? 'cursor-pointer' : ''
                   }`}
                 >
@@ -230,7 +230,7 @@ export function DataTable<T extends Record<string, any>>({
 
       {/* Pagination Footer */}
       {!loading && sortedData.length > 0 && (
-        <div className="p-4 border-t border-slate-100 bg-slate-50/40">
+        <div className="px-5 py-3.5 border-t border-slate-200/70 bg-slate-50/50">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}

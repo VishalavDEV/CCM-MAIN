@@ -115,11 +115,13 @@ export const organizationService = {
       msmeNumber: data.msmeNumber,
       adminName: data.adminName,
       adminEmail: data.adminEmail,
+      adminDesignation: data.adminDesignation || 'Facility Administrator',
       status: 'ACTIVE',
       createdDate: new Date().toISOString().split('T')[0],
       usersCount: 1,
     };
     mockStore.data.organizations.unshift(newOrg);
+    mockStore.save();
     return newOrg;
   },
 
@@ -131,6 +133,7 @@ export const organizationService = {
         ...data,
       };
       mockStore.data.organizations[index] = updated;
+      mockStore.save();
       return updated;
     }
     throw new Error('Organization not found');
@@ -145,6 +148,7 @@ export const organizationService = {
         status: current.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
       };
       mockStore.data.organizations[index] = updated;
+      mockStore.save();
       return updated;
     }
     throw new Error('Organization not found');
@@ -152,5 +156,6 @@ export const organizationService = {
 
   async delete(id: string): Promise<void> {
     mockStore.data.organizations = mockStore.data.organizations.filter((o) => o.id !== id);
+    mockStore.save();
   },
 };
