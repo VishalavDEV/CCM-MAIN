@@ -43,8 +43,13 @@ export const tenantService = {
 
   async getById(id: string): Promise<Tenant | null> {
     const list = await this.getAll();
-    const tenant = list.find((t) => t.id === id);
-    return tenant ? { ...tenant } : null;
+    const tenant = list.find((item) => item.id === id || item.code === id);
+    if (!tenant) return null;
+    const orgCount = mockStore.data.organizations.filter((o) => o.tenantId === tenant.id || o.tenantId === tenant.code).length;
+    return {
+      ...tenant,
+      organizationsCount: orgCount,
+    };
   },
 
   async create(data: TenantFormData): Promise<Tenant> {
@@ -78,35 +83,54 @@ export const tenantService = {
     };
     mockStore.data.tenants.unshift(newTenant);
 
-    // Automatically create corresponding Organization for this Tenant
-    const autoOrg = {
+    // Automatically provision initial organization inside this tenant
+    const defaultOrg = {
       id: `org-${Date.now()}`,
-      tenantId: newTenantId,
-      companyName: `${data.name} Organization`,
-      companyCode: `${data.code.toUpperCase()}-ORG`,
-      companyType: (data.tenantType as any) || 'Private Limited',
+      tenantId: newTenant.id,
+      companyName: `${newTenant.name} Organization`,
+      companyCode: `${newTenant.code}-ORG`,
+      companyType: 'Private Limited' as const,
       businessType: 'Calibration' as const,
-      registrationNumber: data.registrationNumber || '',
-      gstNumber: data.gstNumber ? data.gstNumber.toUpperCase() : '',
-      companyEmail: data.contactEmail,
-      companyPhone: data.contactPhone,
-      addressLine1: data.addressLine1 || '',
-      addressLine2: data.addressLine2 || '',
-      city: data.city || 'Bangalore',
-      state: data.state || 'Karnataka',
-      country: data.country || 'India',
-      pincode: data.pincode || '',
-      timezone: data.timezone || 'Asia/Kolkata (IST)',
-      currency: data.currency || 'INR (₹)',
-      numberOfBranches: Number(data.numberOfBranches) || 1,
+      registrationNumber: newTenant.registrationNumber,
+      gstNumber: newTenant.gstNumber,
+      companyEmail: newTenant.contactEmail,
+      companyPhone: newTenant.contactPhone,
+      addressLine1: newTenant.addressLine1 || 'Main Facility Campus',
+      addressLine2: newTenant.addressLine2,
+      city: newTenant.city || 'Bangalore',
+      state: newTenant.state || 'Karnataka',
+      country: newTenant.country || 'India',
+      pincode: newTenant.pincode || '560001',
+      timezone: newTenant.timezone || 'Asia/Kolkata (IST)',
+      currency: newTenant.currency || 'INR (₹)',
+      numberOfBranches: Number(newTenant.numberOfBranches) || 1,
       numberOfWarehouses: 1,
-      adminName: data.adminName || '',
-      adminEmail: data.adminEmail || '',
+      adminName: newTenant.adminName || 'Admin',
+      adminEmail: newTenant.adminEmail || newTenant.contactEmail,
       status: 'ACTIVE' as const,
       createdDate: new Date().toISOString().split('T')[0],
       usersCount: 1,
     };
-    mockStore.data.organizations.unshift(autoOrg);
+    mockStore.data.organizations.unshift(defaultOrg);
+
+    // Audit log for tenant provisioning
+    mockStore.data.auditLogs.unshift({
+      id: `aud-${Date.now()}`,
+      timestamp: new Date().toLocaleString(),
+      userId: 'usr-001',
+      userName: 'Super Administrator',
+      role: 'Super Admin',
+      tenantId: newTenant.id,
+      organizationId: defaultOrg.id,
+      module: 'tenant',
+      action: 'tenant_created',
+      recordId: newTenant.id,
+      recordIdentifier: newTenant.code,
+      oldValue: 'None',
+      newValue: `Provisioned enterprise tenant ${newTenant.name} (${newTenant.code}) with initial facility ${defaultOrg.companyName}`,
+      ipAddress: '127.0.0.1',
+      result: 'SUCCESS',
+    });
 
     return newTenant;
   },

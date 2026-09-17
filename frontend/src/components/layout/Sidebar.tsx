@@ -67,7 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse })
           icon: <Building2 className="w-4 h-4" />,
           permission: PERMISSION_CODES.TENANT_VIEW,
         },
-        /* HIDDEN FOR NOW: Organization Management
+        /* HIDDEN FOR NOW: Organization Management (Organizations are managed strictly inside Tenants)
         {
           title: 'Organizations',
           path: '/admin/organizations',

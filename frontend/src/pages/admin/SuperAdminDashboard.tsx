@@ -61,9 +61,9 @@ export const SuperAdminDashboard: React.FC = () => {
       value: totalOrgs,
       change: '+2 this mo',
       icon: <Building className="w-5 h-5 text-emerald-600" />,
-      subtitle: 'Active Operational Clusters',
-      onClick: () => navigate('/admin/organizations'),
-      permission: PERMISSION_CODES.ORGANIZATION_VIEW,
+      subtitle: 'Managed inside Tenants',
+      onClick: () => navigate('/admin/tenants'),
+      permission: PERMISSION_CODES.TENANT_VIEW,
     },
     */
     {

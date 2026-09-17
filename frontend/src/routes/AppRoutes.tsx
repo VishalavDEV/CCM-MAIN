@@ -127,56 +127,11 @@ export const AppRoutes: React.FC = () => {
           }
         />
 
-        {/* HIDDEN FOR NOW: Organizations
-        <Route
-          path="admin/organizations"
-          element={
-            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
-              <OrganizationListPage />
-            </PermissionRoute>
-          }
-        />
-        <Route
-          path="organizations"
-          element={
-            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
-              <OrganizationListPage />
-            </PermissionRoute>
-          }
-        />
-        <Route
-          path="admin/organizations/new"
-          element={
-            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_CREATE}>
-              <OrganizationOnboardingWizard />
-            </PermissionRoute>
-          }
-        />
-        <Route
-          path="organizations/new"
-          element={
-            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_CREATE}>
-              <OrganizationOnboardingWizard />
-            </PermissionRoute>
-          }
-        />
-        <Route
-          path="admin/organizations/:id"
-          element={
-            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
-              <OrganizationDetailPage />
-            </PermissionRoute>
-          }
-        />
-        <Route
-          path="organizations/:id"
-          element={
-            <PermissionRoute permission={PERMISSION_CODES.ORGANIZATION_VIEW}>
-              <OrganizationDetailPage />
-            </PermissionRoute>
-          }
-        />
-        */}
+        {/* Organizations are managed strictly inside Tenants */}
+        <Route path="admin/organizations" element={<Navigate to="/admin/tenants" replace />} />
+        <Route path="organizations" element={<Navigate to="/admin/tenants" replace />} />
+        <Route path="admin/organizations/*" element={<Navigate to="/admin/tenants" replace />} />
+        <Route path="organizations/*" element={<Navigate to="/admin/tenants" replace />} />
 
         {/* Users */}
         <Route

@@ -26,12 +26,16 @@ import {
   Phone,
   Mail,
   Hash,
+  Power,
+  Warehouse,
 } from 'lucide-react';
 import { Tenant, TenantFormData, TenantType } from '../../types/tenant';
+import { Organization } from '../../types/organization';
 import { tenantService } from '../../services/tenantService';
+import { organizationService } from '../../services/organizationService';
 import { DataTable, Column } from '../../components/common/DataTable';
 import { StatusBadge } from '../../components/common/StatusBadge';
-import { DeleteModal } from '../../components/modals/AppModals';
+import { DeleteModal, Modal } from '../../components/modals/AppModals';
 import { TextInput, SelectInput, Textarea } from '../../components/forms/FormControls';
 import { useNotification } from '../../context/NotificationContext';
 
@@ -980,14 +984,104 @@ export const AddTenantPage: React.FC = () => {
 export const TenantDetailPage: React.FC = () => {
   const { tenantId } = useParams<{ tenantId: string }>();
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [tenantOrgs, setTenantOrgs] = useState<Organization[]>([]);
+  const [loadingOrgs, setLoadingOrgs] = useState(true);
+  const [addOrgModalOpen, setAddOrgModalOpen] = useState(false);
+  const [submittingOrg, setSubmittingOrg] = useState(false);
+  const [orgToDelete, setOrgToDelete] = useState<Organization | null>(null);
+  const [deleteOrgModalOpen, setDeleteOrgModalOpen] = useState(false);
 
+  const { showToast } = useNotification();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (tenantId) {
-      tenantService.getById(tenantId).then(setTenant);
+  const [newOrgForm, setNewOrgForm] = useState({
+    companyName: '',
+    companyCode: '',
+    companyType: 'Private Limited' as const,
+    businessType: 'Calibration' as const,
+    registrationNumber: '',
+    gstNumber: '',
+    companyEmail: '',
+    companyPhone: '',
+    addressLine1: '',
+    addressLine2: '',
+    city: '',
+    state: '',
+    country: 'India',
+    pincode: '',
+    timezone: 'Asia/Kolkata (IST)',
+    currency: 'INR (₹)',
+    numberOfBranches: 1,
+    numberOfWarehouses: 1,
+    adminName: '',
+    adminEmail: '',
+  });
+
+  const loadTenantAndOrgs = async () => {
+    if (!tenantId) return;
+    setLoadingOrgs(true);
+    try {
+      const t = await tenantService.getById(tenantId);
+      setTenant(t);
+      const allOrgs = await organizationService.getAll();
+      const orgs = allOrgs.filter((o) => o.tenantId === tenantId || (t && o.tenantId === t.code));
+      setTenantOrgs(orgs);
+    } catch {
+      showToast('Error loading tenant facilities', 'error');
+    } finally {
+      setLoadingOrgs(false);
     }
+  };
+
+  useEffect(() => {
+    loadTenantAndOrgs();
   }, [tenantId]);
+
+  const handleCreateOrg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tenant) return;
+    if (!newOrgForm.companyName.trim() || !newOrgForm.companyCode.trim()) {
+      showToast('Facility Name and Code are required', 'warning');
+      return;
+    }
+
+    setSubmittingOrg(true);
+    try {
+      await organizationService.create({
+        ...newOrgForm,
+        tenantId: tenant.id,
+      });
+      showToast(`Facility ${newOrgForm.companyName} created inside ${tenant.name}!`, 'success');
+      setAddOrgModalOpen(false);
+      setNewOrgForm({
+        companyName: '',
+        companyCode: '',
+        companyType: 'Private Limited',
+        businessType: 'Calibration',
+        registrationNumber: '',
+        gstNumber: '',
+        companyEmail: '',
+        companyPhone: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        state: '',
+        country: 'India',
+        pincode: '',
+        timezone: 'Asia/Kolkata (IST)',
+        currency: 'INR (₹)',
+        numberOfBranches: 1,
+        numberOfWarehouses: 1,
+        adminName: '',
+        adminEmail: '',
+      });
+      await loadTenantAndOrgs();
+    } catch {
+      showToast('Failed to create organization', 'error');
+    } finally {
+      setSubmittingOrg(false);
+    }
+  };
 
   if (!tenant) return null;
 
@@ -1131,7 +1225,7 @@ export const TenantDetailPage: React.FC = () => {
               <div>
                 <span className="text-slate-400 block text-[10px] font-semibold">AFFILIATED FACILITIES:</span>
                 <span className="text-slate-700">
-                  {tenant.organizationsCount || 0} Registered Calibration Laboratories
+                  {tenantOrgs.length} Operating Facilities Registered
                 </span>
               </div>
               {tenant.description && (
@@ -1175,7 +1269,314 @@ export const TenantDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* 5. ORGANIZATIONS INSIDE THIS TENANT (NO SEPARATE PAGE) */}
+        <div className="pt-6 border-t border-slate-200/80 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Building className="w-5 h-5 text-indigo-600" />
+                <h2 className="text-base font-bold text-slate-900">
+                  Organizations & Operating Facilities ({tenantOrgs.length})
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                All operating facilities, laboratory networks, and regional testing centers managed strictly inside {tenant.name}.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setAddOrgModalOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Organization to Tenant</span>
+            </button>
+          </div>
+
+          {loadingOrgs ? (
+            <div className="text-center py-8 text-xs text-slate-400">Loading tenant organizations...</div>
+          ) : tenantOrgs.length === 0 ? (
+            <div className="text-center py-10 px-4 bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-xs space-y-3">
+              <div className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+                <Building className="w-5 h-5" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-700">No Organizations Registered Under This Tenant</p>
+                <p className="text-slate-400 mt-1 max-w-sm mx-auto">
+                  Organizations exist strictly inside enterprise tenants. Click below to provision the first laboratory or operating facility for {tenant.name}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddOrgModalOpen(true)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold shadow-xs transition inline-flex items-center gap-2 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add First Organization</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {tenantOrgs.map((org) => (
+                <div
+                  key={org.id}
+                  className="bg-slate-50/80 rounded-2xl p-5 border border-slate-200/90 space-y-3 hover:border-indigo-200 transition"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <span className="font-mono text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">
+                          {org.companyCode}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium">
+                          {org.businessType || 'Laboratory'}
+                        </span>
+                      </div>
+                      <h3 className="text-sm font-bold text-slate-900">{org.companyName}</h3>
+                    </div>
+                    <StatusBadge status={org.status} size="sm" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-200/60">
+                    <div>
+                      <span className="text-slate-400 block text-[10px] font-semibold">LOCATION:</span>
+                      <span className="text-slate-700">{org.city ? `${org.city}, ${org.state}` : 'Headquarters'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] font-semibold">SCALE:</span>
+                      <span className="font-mono font-bold text-slate-800">
+                        {org.numberOfBranches || 1} Branches • {org.numberOfWarehouses || 1} Warehouses
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] font-semibold">EMAIL:</span>
+                      <span className="text-slate-700 truncate block">{org.companyEmail || 'N/A'}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 block text-[10px] font-semibold">PHONE:</span>
+                      <span className="font-mono text-slate-700">{org.companyPhone || 'N/A'}</span>
+                    </div>
+                    {org.gstNumber && (
+                      <div className="col-span-2">
+                        <span className="text-slate-400 block text-[10px] font-semibold">GST NUMBER:</span>
+                        <span className="font-mono text-slate-800 font-semibold">{org.gstNumber}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 text-xs">
+                    <span className="text-[11px] text-slate-400">
+                      Admin: <strong className="text-slate-700">{org.adminName || 'Facility Admin'}</strong>
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await organizationService.toggleStatus(org.id);
+                          showToast(`Organization set to ${org.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'}`, 'info');
+                          loadTenantAndOrgs();
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-200/70 transition cursor-pointer"
+                        title="Toggle Active Status"
+                      >
+                        <Power className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrgToDelete(org);
+                          setDeleteOrgModalOpen(true);
+                        }}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition cursor-pointer"
+                        title="Delete Organization"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* ADD ORGANIZATION MODAL (Directly Inside Tenant) */}
+      <Modal
+        isOpen={addOrgModalOpen}
+        onClose={() => setAddOrgModalOpen(false)}
+        title={`Add Organization to ${tenant.name}`}
+        subtitle={`Provision a new operating facility directly inside tenant (${tenant.code})`}
+        maxWidth="max-w-2xl"
+        fullPage={false}
+      >
+        <form onSubmit={handleCreateOrg} className="space-y-4 p-1">
+          <div className="p-3 bg-indigo-50/70 border border-indigo-100 rounded-xl text-xs text-indigo-900 leading-relaxed">
+            <span className="font-bold">Architectural Boundary:</span> This organization will be provisioned directly under parent tenant <strong>{tenant.name} ({tenant.code})</strong>.
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <TextInput
+              label="Organization / Facility Name"
+              required
+              value={newOrgForm.companyName}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, companyName: e.target.value })}
+              placeholder="e.g. Apex Bangalore Calibration Facility"
+            />
+            <TextInput
+              label="Facility Code"
+              required
+              value={newOrgForm.companyCode}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, companyCode: e.target.value.toUpperCase() })}
+              placeholder="e.g. APEX-BLR-01"
+            />
+            <SelectInput
+              label="Company Legal Type"
+              required
+              value={newOrgForm.companyType}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, companyType: e.target.value as any })}
+              options={[
+                { value: 'Private Limited', label: 'Private Limited' },
+                { value: 'Public Limited', label: 'Public Limited' },
+                { value: 'Partnership', label: 'Partnership' },
+                { value: 'Proprietorship', label: 'Proprietorship' },
+                { value: 'LLP', label: 'LLP' },
+              ]}
+            />
+            <SelectInput
+              label="Business Type"
+              required
+              value={newOrgForm.businessType}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, businessType: e.target.value as any })}
+              options={[
+                { value: 'Calibration', label: 'Calibration & Metrology' },
+                { value: 'Laboratory', label: 'Testing Laboratory' },
+                { value: 'Manufacturing', label: 'Manufacturing' },
+                { value: 'Service', label: 'Field Services' },
+              ]}
+            />
+            <TextInput
+              label="Facility Email"
+              type="email"
+              required
+              value={newOrgForm.companyEmail}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, companyEmail: e.target.value })}
+              placeholder="blr-lab@apexmetrology.com"
+            />
+            <TextInput
+              label="Facility Phone"
+              required
+              value={newOrgForm.companyPhone}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, companyPhone: e.target.value })}
+              placeholder="+91 80 2839 0001"
+            />
+            <TextInput
+              label="GST Number"
+              value={newOrgForm.gstNumber}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, gstNumber: e.target.value.toUpperCase() })}
+              placeholder="29ABCDE1234F1Z5"
+            />
+            <TextInput
+              label="Registration Number"
+              value={newOrgForm.registrationNumber}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, registrationNumber: e.target.value })}
+              placeholder="U74999KA2020PTC139888"
+            />
+            <TextInput
+              label="Address Line 1"
+              required
+              value={newOrgForm.addressLine1}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, addressLine1: e.target.value })}
+              placeholder="Plot 42, Industrial Suburb"
+            />
+            <TextInput
+              label="City"
+              required
+              value={newOrgForm.city}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, city: e.target.value })}
+              placeholder="Bangalore"
+            />
+            <TextInput
+              label="State"
+              required
+              value={newOrgForm.state}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, state: e.target.value })}
+              placeholder="Karnataka"
+            />
+            <TextInput
+              label="Pincode"
+              required
+              value={newOrgForm.pincode}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, pincode: e.target.value })}
+              placeholder="560058"
+            />
+            <TextInput
+              type="number"
+              label="Number of Branches"
+              min={1}
+              value={String(newOrgForm.numberOfBranches)}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, numberOfBranches: Number(e.target.value) || 1 })}
+            />
+            <TextInput
+              type="number"
+              label="Number of Warehouses"
+              min={1}
+              value={String(newOrgForm.numberOfWarehouses)}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, numberOfWarehouses: Number(e.target.value) || 1 })}
+            />
+            <TextInput
+              label="Facility Admin Name"
+              required
+              value={newOrgForm.adminName}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, adminName: e.target.value })}
+              placeholder="Facility General Manager"
+            />
+            <TextInput
+              label="Facility Admin Email"
+              type="email"
+              required
+              value={newOrgForm.adminEmail}
+              onChange={(e) => setNewOrgForm({ ...newOrgForm, adminEmail: e.target.value })}
+              placeholder="gm-blr@apexmetrology.com"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setAddOrgModalOpen(false)}
+              className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submittingOrg}
+              className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl shadow-xs transition disabled:opacity-50 cursor-pointer"
+            >
+              {submittingOrg ? 'Provisioning...' : 'Provision Organization'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* DELETE ORGANIZATION CONFIRMATION MODAL */}
+      <DeleteModal
+        isOpen={deleteOrgModalOpen}
+        onClose={() => setDeleteOrgModalOpen(false)}
+        onConfirm={async () => {
+          if (!orgToDelete) return;
+          await organizationService.delete(orgToDelete.id);
+          showToast('Organization deleted', 'info');
+          setDeleteOrgModalOpen(false);
+          setOrgToDelete(null);
+          loadTenantAndOrgs();
+        }}
+        title="Delete Organization"
+        itemName={orgToDelete?.companyName}
+        message="Are you sure you want to remove this organization from the tenant? All linked laboratory operations will be affected."
+      />
     </div>
   );
 };
