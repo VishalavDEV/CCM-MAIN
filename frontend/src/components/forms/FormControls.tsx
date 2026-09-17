@@ -24,12 +24,12 @@ export const TextInput: React.FC<
         <input
           disabled={disabled}
           {...props}
-          className={`w-full py-2 text-sm bg-white border rounded-xl transition-all placeholder:text-slate-400 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 ${
+          className={`w-full py-2 text-sm bg-white border rounded-xl transition-all placeholder:text-slate-400 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 shadow-2xs ${
             leftIcon ? 'pl-10 pr-3.5' : 'px-3.5'
           } ${
             error
               ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
-              : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
+              : 'border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
           }`}
         />
       </div>
@@ -58,12 +58,12 @@ export const NumberInput: React.FC<
           type="number"
           disabled={disabled}
           {...props}
-          className={`w-full py-2 text-sm bg-white border rounded-xl transition-all placeholder:text-slate-400 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 ${
+          className={`w-full py-2 text-sm bg-white border rounded-xl transition-all placeholder:text-slate-400 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 shadow-2xs ${
             leftIcon ? 'pl-10 pr-3.5' : 'px-3.5'
           } ${
             error
               ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
-              : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
+              : 'border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
           }`}
         />
       </div>
@@ -93,16 +93,16 @@ export const PasswordInput: React.FC<
           type={show ? 'text' : 'password'}
           disabled={disabled}
           {...props}
-          className={`w-full py-2 pl-3.5 pr-10 text-sm bg-white border rounded-xl transition-all placeholder:text-slate-400 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 ${
+          className={`w-full py-2 pl-3.5 pr-10 text-sm bg-white border rounded-xl transition-all placeholder:text-slate-400 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 shadow-2xs ${
             error
               ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
-              : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
+              : 'border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
           }`}
         />
         <button
           type="button"
           onClick={() => setShow(!show)}
-          className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+          className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
         >
           {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
@@ -132,10 +132,10 @@ export const SelectInput: React.FC<
       <select
         disabled={disabled}
         {...props}
-        className={`w-full py-2 px-3.5 text-sm bg-white border rounded-xl transition-all text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 ${
+        className={`w-full py-2 px-3.5 text-sm bg-white border rounded-xl transition-all text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 shadow-2xs ${
           error
             ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
-            : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
+            : 'border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
         }`}
       >
         {options.map((opt) => (
@@ -167,10 +167,10 @@ export const Textarea: React.FC<
         disabled={disabled}
         rows={props.rows || 3}
         {...props}
-        className={`w-full py-2 px-3.5 text-sm bg-white border rounded-xl transition-all placeholder:text-slate-400 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 ${
+        className={`w-full py-2 px-3.5 text-sm bg-white border rounded-xl transition-all placeholder:text-slate-400 text-slate-800 disabled:bg-slate-50 disabled:text-slate-400 shadow-2xs ${
           error
             ? 'border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200'
-            : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100'
+            : 'border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20'
         }`}
       />
       {error && (
@@ -197,15 +197,13 @@ export const FileUpload: React.FC<{
       <label className="text-xs font-semibold text-slate-700">
         {label} {required && <span className="text-rose-500">*</span>}
       </label>
-      <label className="border-2 border-dashed border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:border-indigo-400 hover:bg-indigo-50/20 cursor-pointer transition">
-        <Upload className="w-5 h-5 text-indigo-600" />
+      <label className="border-2 border-dashed border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:border-sky-400 hover:bg-sky-50/20 cursor-pointer transition-colors group">
+        <Upload className="w-5 h-5 text-sky-600 group-hover:scale-110 transition-transform" />
         <span className="text-xs text-slate-600 font-medium">
           {fileName ? (
-            <span className="text-indigo-600 font-semibold">{fileName}</span>
+            <span className="text-sky-600 font-semibold">{fileName}</span>
           ) : (
-            <>
-              Click to browse or drag file here
-            </>
+            <>Click to browse or drag file here</>
           )}
         </span>
         <span className="text-[10px] text-slate-400">PDF, JPG, PNG up to 10MB</span>
@@ -239,7 +237,7 @@ export const Checkbox: React.FC<{
         checked={checked}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+        className="mt-0.5 rounded border-slate-300 text-sky-600 focus:ring-sky-500 w-4 h-4 cursor-pointer"
       />
       <div>
         <span className="text-xs font-semibold text-slate-800">{label}</span>

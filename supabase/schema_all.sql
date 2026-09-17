@@ -54,6 +54,10 @@ CREATE TABLE IF NOT EXISTS tenants (
     name VARCHAR(255) NOT NULL,
     code VARCHAR(50) NOT NULL UNIQUE,
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
+    admin_name VARCHAR(255),
+    admin_email VARCHAR(255),
+    admin_designation VARCHAR(150),
+    admin_role VARCHAR(100) DEFAULT 'SUPER_ADMIN',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -75,6 +79,10 @@ CREATE TABLE IF NOT EXISTS organizations (
     address TEXT,
     phone VARCHAR(50),
     email VARCHAR(255),
+    admin_name VARCHAR(255),
+    admin_email VARCHAR(255),
+    admin_designation VARCHAR(150),
+    admin_role VARCHAR(100) DEFAULT 'ADMIN',
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

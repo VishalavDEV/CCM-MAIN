@@ -74,23 +74,26 @@ export const Modal: React.FC<{
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in">
       <div
-        className={`bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full ${maxWidth} overflow-hidden transform transition-all animate-scale-up`}
+        className={`bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full ${maxWidth} max-h-[92vh] flex flex-col overflow-hidden transform transition-all animate-scale-up`}
       >
         {title && (
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800">{title}</h3>
+          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">{title}</h3>
+              {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+            </div>
             <button
               type="button"
               onClick={onClose}
-              className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className="flex-1 overflow-y-auto">{children}</div>
       </div>
     </div>
   );

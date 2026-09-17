@@ -50,6 +50,14 @@ async function run() {
     await client.query(seedSql);
     console.log('✅ Database seeded successfully!');
 
+    const rbacMigrationPath = path.join(process.cwd(), 'supabase', 'migrations', '063_update_rbac_matrix_and_designations.sql');
+    if (fs.existsSync(rbacMigrationPath)) {
+      console.log('\n🛡️ Applying 063_update_rbac_matrix_and_designations.sql...');
+      const rbacSql = fs.readFileSync(rbacMigrationPath, 'utf8');
+      await client.query(rbacSql);
+      console.log('✅ RBAC matrix and designations migration applied successfully!');
+    }
+
     console.log('\n🎉 ALL MIGRATIONS AND SEEDS APPLIED AUTOMATICALLY!\n');
   } catch (err) {
     console.error('\n❌ Error executing SQL script:', err.message);

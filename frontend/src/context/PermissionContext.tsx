@@ -102,7 +102,12 @@ export const PermissionProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const hasPermission = useCallback(
     (permission: string): boolean => {
       if (!user) return false;
-      return userPermissions.includes(permission);
+      if (user.role === 'SUPER_ADMIN') return true;
+      if (userPermissions.includes(permission)) return true;
+      const normalized = permission
+        .replace(/^[a-z]+s\./, (m) => m.replace(/s\./, '.'))
+        .replace(/\.edit$/, '.update');
+      return userPermissions.includes(normalized);
     },
     [user, userPermissions]
   );

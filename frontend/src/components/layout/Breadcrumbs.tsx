@@ -9,8 +9,8 @@ export const Breadcrumbs: React.FC = () => {
   if (pathnames.length === 0) return null;
 
   return (
-    <nav className="flex items-center text-xs text-slate-500 mb-4 select-none">
-      <Link to="/admin/dashboard" className="flex items-center gap-1 hover:text-slate-800 transition">
+    <nav className="flex items-center text-xs text-slate-500 mb-4 select-none font-medium">
+      <Link to="/admin/dashboard" className="flex items-center gap-1.5 px-2 py-1 -ml-2 rounded-md hover:text-slate-900 hover:bg-slate-100/70 transition-colors">
         <Home className="w-3.5 h-3.5 text-slate-400" />
         <span>Home</span>
       </Link>
@@ -24,11 +24,11 @@ export const Breadcrumbs: React.FC = () => {
 
         return (
           <React.Fragment key={name}>
-            <ChevronRight className="w-3.5 h-3.5 mx-1.5 text-slate-300 shrink-0" />
+            <ChevronRight className="w-3.5 h-3.5 mx-1 text-slate-300 shrink-0" />
             {isLast ? (
-              <span className="font-semibold text-slate-800 truncate">{formatted}</span>
+              <span className="font-semibold text-slate-900 px-2 py-0.5 rounded-md bg-slate-100/80 truncate">{formatted}</span>
             ) : (
-              <Link to={routeTo} className="hover:text-slate-800 transition truncate">
+              <Link to={routeTo} className="hover:text-slate-900 px-2 py-1 rounded-md hover:bg-slate-100/70 transition-colors truncate">
                 {formatted}
               </Link>
             )}
